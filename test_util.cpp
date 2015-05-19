@@ -41,7 +41,7 @@ void EvaluateClassify(const vector<int> &ground_truth,
         }
     }
 
-    *tpr = static_cast<float>(tp_num) / cv::sum(class_sum.colRange(1, class_num))[0];
+    *tpr = static_cast<float>(tp_num) / cv::sum(class_sum.rowRange(1, class_num))[0];
     *fpr = static_cast<float>(fp_num);
     if (is_open)
     {
@@ -49,7 +49,7 @@ void EvaluateClassify(const vector<int> &ground_truth,
     }
     else
     {
-        *fpr /= ((class_num - 2) * cv::sum(class_sum.colRange(1, class_num))[0]);
+        *fpr /= ((class_num - 2) * cv::sum(class_sum.rowRange(1, class_num))[0]);
     }
 
     if (result_mat != nullptr)

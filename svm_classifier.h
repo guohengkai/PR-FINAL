@@ -13,7 +13,7 @@
 
 namespace ghk
 {
-class SvmClassifier: Classifier
+class SvmClassifier: public Classifier
 {
 public:
     SvmClassifier(): svm_model_(NULL) {}

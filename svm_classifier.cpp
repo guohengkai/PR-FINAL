@@ -5,6 +5,7 @@
     > Created Time: Tue 19 May 2015 01:58:23 PM CST
  ************************************************************************/
 #include "svm_classifier.h"
+#include "mat_util.h"
 #include "file_util.h"
 
 namespace ghk
@@ -70,9 +71,7 @@ void PrintNull(const char *s) {}
 bool SvmClassifier::Train(const Mat &feats, const vector<int> &labels)
 {
     // Calculate the normalization parameters
-    cv::reduce(feats, normA_, 0, CV_REDUCE_MIN);
-    cv::reduce(feats, normB_, 0, CV_REDUCE_MAX);
-    normB_ -= normA_;
+    TrainNormalize(feats, &normA_, &normB_);
 
     // Normalize the features
     Mat feats_norm;
@@ -131,9 +130,7 @@ bool SvmClassifier::Predict(const Mat &feats, vector<int> *labels) const
 
 void SvmClassifier::Normalize(const Mat &feats, Mat *feats_norm) const
 {
-    int n = feats.rows;
-    *feats_norm = (feats - cv::repeat(normA_, n, 1))
-        / cv::repeat(normB_, n, 1);
+    ghk::Normalize(normA_, normB_, feats, feats_norm);
 }
 
 void SvmClassifier::PrepareParameter(int feat_dim, svm_parameter *param) const

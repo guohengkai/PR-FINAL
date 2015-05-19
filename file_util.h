@@ -17,7 +17,7 @@ bool LoadMat(const string &file_name, Mat *mat,
 bool SaveMat(const string &file_name, const Mat &mat,
         const vector<float> &param);
 bool SaveMat(const string& file_name, const Mat& mat);
-bool MakePath(const string path_name, mode_t mode);
+bool MakePath(const string path_name, mode_t mode = 0755);
 }  // namespace ghk
 
 #endif  // FINAL_FILE_UTIL_H_

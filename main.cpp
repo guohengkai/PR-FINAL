@@ -6,13 +6,25 @@
  ************************************************************************/
 #include "common.h"
 #include "dataset.h"
+#include "test_class_util.h"
+#include "knn_classifier.h"
+#include "svm_classifier.h"
 
 using namespace ghk;
 
-const string root_dir = "/home/ghk/Src/PR-HW/final";
+const string root_dir = "/home/ghk/Src/PR-HW/PR-FINAL";
+const string model_dir = "/model";
+
+void TestClassifier()
+{
+    // KnnClassifier classifier(10);
+    SvmClassifier classifier;
+    TestClassifier(&classifier, root_dir + model_dir);
+}
 
 int main(int argc, char **argv)
 {
+    /*
     Dataset dataset(root_dir);
 
     const size_t idx = 72;
@@ -27,6 +39,9 @@ int main(int argc, char **argv)
     dataset.DrawRectAndLabel(rects, labels, &test_image);
 
     cv::imshow("", test_image);
-    cv::waitKey();
+    cv::waitKey(); */
+
+    TestClassifier();
+
     return 0;
 }

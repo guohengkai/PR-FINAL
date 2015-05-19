@@ -17,6 +17,7 @@
 namespace ghk
 {
 using cv::Mat;
+using cv::Point;
 using cv::Rect;
 using cv::imread;
 
