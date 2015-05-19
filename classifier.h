@@ -18,9 +18,9 @@ public:
     virtual bool Load(const string &model_name) { return false; }
 
     virtual bool Train(const Mat &feats, const vector<int> &labels) = 0;
-    virtual int Predict(const Mat &feat) const = 0;
-    bool Predict(const Mat &feats, vector<int> *labels) const;
+    virtual bool Predict(const Mat &feats, vector<int> *labels) const = 0;
+    int Predict(const Mat &feat) const;
 };
-}
+}  // namespace ghk
 
 #endif  // FINAL_CLASSIFIER_H_

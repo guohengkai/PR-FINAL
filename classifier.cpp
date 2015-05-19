@@ -8,24 +8,13 @@
 
 namespace ghk
 {
-bool Classifier::Predict(const Mat &feats, vector<int> *labels) const
+int Classifier::Predict(const Mat &feat) const
 {
-    if (labels == nullptr)
+    vector<int> label;
+    if (!Predict(feat, &label))
     {
-        return false;
+        return -1;
     }
-
-    labels->clear();
-    for (int i = 0; i < feats.rows; ++i)
-    {
-        int res = Predict(feats.row(i));
-        if (res < 0)
-        {
-            labels->clear();
-            return false;
-        }
-        labels->push_back(res);
-    }
-    return true;
+    return label[0];
 }
 }  // namespace ghk
