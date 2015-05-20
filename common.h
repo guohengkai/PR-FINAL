@@ -10,7 +10,9 @@
 #include <opencv2/opencv.hpp>
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -19,10 +21,10 @@ namespace ghk
 using cv::Mat;
 using cv::Point;
 using cv::Rect;
-using cv::imread;
 
 using std::size_t;
 using std::map;
+using std::set;
 using std::string;
 using std::vector;
 }  // namespace ghk

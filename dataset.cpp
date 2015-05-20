@@ -108,7 +108,7 @@ bool Dataset::GetFullImage(size_t idx, Mat *image) const
     {
         return false;
     }
-    *image = imread(d_name_list_[idx], 1);
+    *image = cv::imread(d_name_list_[idx], 1);
     return true;
 }
 
@@ -162,7 +162,7 @@ bool Dataset::LoadClassifyImages(const string &data_dir,
             name[strlen(name) - 1] = '\0';
         }
 
-        Mat image = imread(data_dir + name, 1);
+        Mat image = cv::imread(data_dir + name, 1);
         c_image_[1].push_back(image);
         c_label_[1].push_back(label);
     }
@@ -174,7 +174,7 @@ bool Dataset::LoadClassifyImages(const string &data_dir,
         {
             name[strlen(name) - 1] = '\0';
         }
-        Mat image = imread(data_dir + name, 1);
+        Mat image = cv::imread(data_dir + name, 1);
         c_image_[0].push_back(image);
         c_label_[0].push_back(label);
     }
