@@ -8,24 +8,14 @@
 
 namespace ghk
 {
-bool SignClassifier::Predict(const vector<Mat> &images, vector<int> *labels) const
+int SignClassifier::Predict(const Mat &image)
 {
-    if (labels == nullptr)
+    vector<Mat> image_vec(1, image);
+    vector<int> labels;
+    if (!Predict(image_vec, &labels))
     {
-        return false;
+        return -1;
     }
-
-    labels->clear();
-    for (size_t i = 0; i < images.size(); ++i)
-    {
-        int res = Predict(images[i]);
-        if (res < 0)
-        {
-            labels->clear();
-            return false;
-        }
-        labels->push_back(res);
-    }
-    return true;
+    return labels[0];
 }
 }  // namespace ghk

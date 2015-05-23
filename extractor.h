@@ -19,8 +19,8 @@ public:
 
     virtual bool Train(const vector<Mat> &images,
                 const vector<int> &labels) { return false; }
-    virtual bool Extract(const vector<Mat> &images, Mat *feats) const = 0;
-    bool Extract(const Mat &image, Mat *feat) const;
+    virtual bool Extract(const vector<Mat> &images, Mat *feats) = 0;
+    bool Extract(const Mat &image, Mat *feat);
 
     inline int feat_dim() const { return feat_dim_; }
     inline void set_feat_dim(int feat_dim) { feat_dim_ = feat_dim; }

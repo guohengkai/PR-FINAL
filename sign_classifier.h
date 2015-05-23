@@ -19,9 +19,10 @@ public:
     virtual bool Load(const string &model_name) { return false; }
 
     virtual bool Train(const Dataset &dataset) = 0;
-    virtual bool Test(const Dataset &dataset) const { return false; }
-    virtual int Predict(const Mat &image) const = 0;
-    bool Predict(const vector<Mat> &images, vector<int> *labels) const;
+    virtual bool Test(const Dataset &dataset) { return false; }
+    virtual bool Predict(const vector<Mat> &images,
+            vector<int> *labels) = 0;
+    int Predict(const Mat &image);
 };
 }  // namespace ghk
 

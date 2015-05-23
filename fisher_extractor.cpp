@@ -10,9 +10,8 @@
 
 namespace ghk
 {
-FisherExtractor::FisherExtractor(int feat_dim)
+FisherExtractor::FisherExtractor()
 {
-    set_feat_dim(feat_dim);
 }
 
 bool FisherExtractor::Save(const string &model_name) const
@@ -52,10 +51,7 @@ bool FisherExtractor::Train(const vector<Mat> &images,
     }
 
     int num_c = GetUniqueClassNum(labels);
-    if (feat_dim() == 0 || feat_dim() > num_c - 1)
-    {
-        set_feat_dim(num_c - 1);
-    }
+    set_feat_dim(num_c - 1);
 
     // PCA project
     int n = image_vecs.rows;
@@ -73,7 +69,7 @@ bool FisherExtractor::Train(const vector<Mat> &images,
     return true;
 }
 
-bool FisherExtractor::Extract(const vector<Mat> &images, Mat *feats) const
+bool FisherExtractor::Extract(const vector<Mat> &images, Mat *feats)
 {
     if (feats == nullptr)
     {

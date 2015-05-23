@@ -17,15 +17,12 @@ EigenExtractor::EigenExtractor(int feat_dim)
 
 bool EigenExtractor::Save(const string &model_name) const
 {
-    if (!SaveMat(model_name + "_vec.txt", pca_.eigenvectors))
+    vector<float> param(1, feat_dim());
+    if (!SaveMat(model_name + "_vec.txt", eigen_vector_, param))
     {
         return false;
     }
-    if (!SaveMat(model_name + "_val.txt", pca_.eigenvalues))
-    {
-        return false;
-    }
-    if (!SaveMat(model_name + "_mean.txt", pca_.mean))
+    if (!SaveMat(model_name + "_mean.txt", mean_))
     {
         return false;
     }
@@ -34,15 +31,13 @@ bool EigenExtractor::Save(const string &model_name) const
 
 bool EigenExtractor::Load(const string &model_name)
 {
-    if (!LoadMat(model_name + "_vec.txt", &pca_.eigenvectors))
+    vector<float> param;
+    if (!LoadMat(model_name + "_vec.txt", &eigen_vector_, &param))
     {
         return false;
     }
-    if (!LoadMat(model_name + "_val.txt", &pca_.eigenvalues))
-    {
-        return false;
-    }
-    if (!LoadMat(model_name + "_mean.txt", &pca_.mean))
+    set_feat_dim(param[0]);
+    if (!LoadMat(model_name + "_mean.txt", &mean_))
     {
         return false;
     }
@@ -59,19 +54,20 @@ bool EigenExtractor::Train(const vector<Mat> &images,
         return false;
     }
 
+    // PCA project
+    cv::PCA pca(image_vecs, Mat(), CV_PCA_DATA_AS_ROW);
+
+    // Save the full project matrix
+    mean_ = pca.mean.reshape(1, 1);
+    eigen_vector_ = pca.eigenvectors.t();
     if (feat_dim() == 0)
     {
-        pca_(image_vecs, Mat(), CV_PCA_DATA_AS_ROW);
         set_feat_dim(image_vecs.cols);
-    }
-    else
-    {
-        pca_(image_vecs, Mat(), CV_PCA_DATA_AS_ROW, feat_dim());
     }
     return true;
 }
 
-bool EigenExtractor::Extract(const vector<Mat> &images, Mat *feats) const
+bool EigenExtractor::Extract(const vector<Mat> &images, Mat *feats)
 {
     if (feats == nullptr)
     {
@@ -85,7 +81,12 @@ bool EigenExtractor::Extract(const vector<Mat> &images, Mat *feats) const
         return false;
     }
 
-    pca_.project(image_vecs, *feats);
+    if (feat_dim() == 0 || feat_dim() > eigen_vector_.cols)
+    {
+        set_feat_dim(eigen_vector_.cols);
+    }
+    *feats = cv::subspaceProject(eigen_vector_.colRange(0, feat_dim()),
+            mean_, image_vecs);
     return true;
 }
 }  // namespace ghk

@@ -15,17 +15,18 @@ namespace ghk
 class EigenExtractor: public Extractor
 {
 public:
-    explicit EigenExtractor(int feat_dim);
+    explicit EigenExtractor(int feat_dim = 0);
 
     virtual bool Save(const string &model_name) const;
     virtual bool Load(const string &model_name);
 
     virtual bool Train(const vector<Mat> &images,
                 const vector<int> &labels);
-    virtual bool Extract(const vector<Mat> &images, Mat *feats) const;
+    virtual bool Extract(const vector<Mat> &images, Mat *feats);
 
 private:
-    cv::PCA pca_;
+    Mat eigen_vector_;
+    Mat mean_;
 };
 }  // namespace ghk
 

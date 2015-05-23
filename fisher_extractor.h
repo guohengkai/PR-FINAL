@@ -15,14 +15,14 @@ namespace ghk
 class FisherExtractor: public Extractor
 {
 public:
-    explicit FisherExtractor(int feat_dim);
+    FisherExtractor();
 
     virtual bool Save(const string &model_name) const;
     virtual bool Load(const string &model_name);
 
     virtual bool Train(const vector<Mat> &images,
                 const vector<int> &labels);
-    virtual bool Extract(const vector<Mat> &images, Mat *feats) const;
+    virtual bool Extract(const vector<Mat> &images, Mat *feats);
 
 private:
     Mat eigen_vector_;
