@@ -101,7 +101,6 @@ bool KnnSignClassifier::Train(const Dataset &dataset)
     vector<Mat> images;
     vector<int> labels;
     size_t n = dataset.GetClassifyNum(true);
-    img_size_ = 20;
     Size img_size(img_size_, img_size_);
     printf("Preparing training data...\n");
     for (size_t i = 0; i < n; ++i)
@@ -139,7 +138,29 @@ bool KnnSignClassifier::Train(const Dataset &dataset)
 
 bool KnnSignClassifier::Test(const Dataset &dataset)
 {
-    return false;
+    // Get test data
+    vector<Mat> images;
+    vector<int> labels;
+    size_t n = dataset.GetClassifyNum(false);
+    Size img_size(img_size_, img_size_);
+    printf("Preparing testing data...\n");
+    for (size_t i = 0; i < n; ++i)
+    {
+        Mat image;
+        dataset.GetClassifyImage(false, i, &image, img_size);
+        cv::cvtColor(image, image, CV_BGR2GRAY);
+        images.push_back(image);
+        labels.push_back(dataset.GetClassifyLabel(false, i));
+    }
+
+    // Test on test dataset
+    vector<int> predict_labels;
+    Predict(images, &predict_labels);
+    float rate, fp;
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
+    printf("Test rate: %0.2f%%\n", rate * 100);
+
+    return true;
 }
 
 bool KnnSignClassifier::Predict(const vector<Mat> &images,

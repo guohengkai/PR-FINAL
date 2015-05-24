@@ -33,14 +33,18 @@ void TestClassifier()
 void TrainSignClassifier(SignClassifier *classifier)
 {
     Dataset dataset(root_dir);
+    const string model_name = "/knn_fisher";
     classifier->Train(dataset);
+    classifier->Save(root_dir + model_dir + model_name);
+    classifier->Load(root_dir + model_dir + model_name);
+    classifier->Test(dataset);
 }
 
 int main(int argc, char **argv)
 {
     // TestDataset();
     // TestClassifier();
-    KnnSignClassifier classifier(false, 5);
+    KnnSignClassifier classifier(true, 5, 100, 30);
     TrainSignClassifier(&classifier);
 
     return 0;
