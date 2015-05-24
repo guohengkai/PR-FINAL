@@ -53,8 +53,12 @@ bool Image2Vec(const vector<Mat> &images, Mat *image_vecs)
     *image_vecs = Mat(0, m, CV_32F);
     for (auto image: images)
     {
-        Mat image_gray;
-        cv::cvtColor(image, image_gray, CV_BGR2GRAY);
+        Mat image_gray(image);
+        if (image_gray.channels() > 1)
+        {
+            cv::cvtColor(image, image_gray, CV_BGR2GRAY);
+        }
+        image_gray.convertTo(image_gray, CV_32F);
         if (image_gray.total() != m)
         {
             return false;

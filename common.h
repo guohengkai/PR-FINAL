@@ -21,11 +21,14 @@ namespace ghk
 using cv::Mat;
 using cv::Point;
 using cv::Rect;
+using cv::Size;
 
 using std::size_t;
 using std::map;
 using std::set;
 using std::string;
 using std::vector;
+using std::cout;
+using std::endl;
 }  // namespace ghk
 #endif  // FINAL_COMMON_H_

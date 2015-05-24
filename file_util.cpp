@@ -113,4 +113,14 @@ bool MakePath(const string path_name, mode_t mode)
 
     return true;
 }
+
+void ClipString(char *str)
+{
+    int k = strlen(str) - 1;
+    while (str[k] == '\n' || str[k] == '\r' || str[k] == ' ')
+    {
+        str[k] = '\0';
+        --k;
+    }
+}
 }  // namespace ghk

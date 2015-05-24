@@ -32,7 +32,8 @@ public:
     Dataset(const string &base_dir);
 
     int GetClassifyLabel(bool is_train, size_t idx) const;
-    bool GetClassifyImage(bool is_train, size_t idx, Mat *image) const;
+    bool GetClassifyImage(bool is_train, size_t idx,
+            Mat *image, Size img_size = Size()) const;
 
     bool GetDetectLabels(size_t idx, vector<int> *labels) const;
     bool GetDetectRects(size_t idx, vector<Rect> *rects) const;

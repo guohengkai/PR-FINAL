@@ -97,4 +97,33 @@ void TestClassifier(Classifier *classifier, const string &tmp_dir)
     cv::imshow("", img);
     cv::waitKey(0);
 }
+
+void TestDataset(Dataset &dataset)
+{
+    Mat image = cv::imread("/home/ghk/Src/PR-HW/PR-FINAL/data/1/0002.jpg");
+    cv::imshow("", image);
+    cv::waitKey();
+
+    const size_t idx = 72;
+    Mat test_image;
+    vector<Rect> rects;
+    vector<int> labels;
+    
+    dataset.GetFullImage(idx, &test_image);
+    dataset.GetDetectLabels(idx, &labels);
+    dataset.GetDetectRects(idx, &rects);
+
+    dataset.DrawRectAndLabel(rects, labels, &test_image);
+
+    cv::imshow("", test_image);
+    cv::waitKey();
+
+    dataset.GetClassifyImage(true, idx, &test_image);
+    cv::imshow("", test_image);
+    cv::waitKey();
+
+    dataset.GetClassifyImage(true, idx, &test_image, Size(200, 200));
+    cv::imshow("", test_image);
+    cv::waitKey();
+}
 }  // namespace ghk

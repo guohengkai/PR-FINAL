@@ -55,17 +55,22 @@ bool FisherExtractor::Train(const vector<Mat> &images,
 
     // PCA project
     int n = image_vecs.rows;
+    printf("Training PCA...\n");
     cv::PCA pca(image_vecs, Mat(), CV_PCA_DATA_AS_ROW, n - num_c);
 
     // Fisher project
     Mat label_mat;
     Vec2Mat(labels, &label_mat);
+    printf("Training LDA...\n");
     cv::LDA lda(pca.project(image_vecs), label_mat, feat_dim());
 
     // Save the project matrix
     mean_ = pca.mean.reshape(1, 1);
-    cv::gemm(pca.eigenvectors, lda.eigenvectors(), 1.0, Mat(), 0.0,
+    Mat lda_vectors = lda.eigenvectors();
+    lda_vectors.convertTo(lda_vectors, CV_32F);
+    cv::gemm(pca.eigenvectors, lda_vectors, 1.0, Mat(), 0.0,
             eigen_vector_, cv::GEMM_1_T);
+    printf("Done!\n");
     return true;
 }
 

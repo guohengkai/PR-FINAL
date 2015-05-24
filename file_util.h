@@ -18,6 +18,7 @@ bool SaveMat(const string &file_name, const Mat &mat,
         const vector<float> &param);
 bool SaveMat(const string& file_name, const Mat& mat);
 bool MakePath(const string path_name, mode_t mode = 0755);
+void ClipString(char *str);
 }  // namespace ghk
 
 #endif  // FINAL_FILE_UTIL_H_

@@ -7,6 +7,7 @@
 #include "dataset.h"
 #include <sstream>
 #include "common.h"
+#include "file_util.h"
 
 namespace ghk
 {
@@ -71,13 +72,21 @@ int Dataset::GetClassifyLabel(bool is_train, size_t idx) const
     return c_label_[INDEX(is_train)][idx];
 }
 
-bool Dataset::GetClassifyImage(bool is_train, size_t idx, Mat *image) const
+bool Dataset::GetClassifyImage(bool is_train, size_t idx,
+        Mat *image, Size img_size) const
 {
     if (idx >= GetClassifyNum(is_train))
     {
         return false;
     }
-    *image = Mat(c_image_[INDEX(is_train)][idx]);
+    if (img_size.area() == 0)
+    {
+        *image = Mat(c_image_[INDEX(is_train)][idx]);
+    }
+    else
+    {
+        cv::resize(c_image_[INDEX(is_train)][idx], *image, img_size);
+    }
     return true;
 }
 
@@ -109,6 +118,11 @@ bool Dataset::GetFullImage(size_t idx, Mat *image) const
         return false;
     }
     *image = cv::imread(d_name_list_[idx], 1);
+    if (image->empty())
+    {
+        printf("Fail to load %s.\n", d_name_list_[idx].c_str());
+        return false;
+    }
     return true;
 }
 
@@ -157,12 +171,15 @@ bool Dataset::LoadClassifyImages(const string &data_dir,
             printf("No enough data.\n");
             return false;
         }
-        if (name[strlen(name) - 1] == '\n')
-        {
-            name[strlen(name) - 1] = '\0';
-        }
 
+        ClipString(name);
         Mat image = cv::imread(data_dir + name, 1);
+        if (image.empty())
+        {
+            printf("Fail to load %s.\n", (data_dir + name).c_str());
+            cout << data_dir + name << endl;
+            return false;
+        }
         c_image_[1].push_back(image);
         c_label_[1].push_back(label);
     }
@@ -170,11 +187,13 @@ bool Dataset::LoadClassifyImages(const string &data_dir,
     // Train images
     while (fgets(name, MAX_LINE, in_file) != NULL)
     {
-        if (name[strlen(name) - 1] == '\n')
-        {
-            name[strlen(name) - 1] = '\0';
-        }
+        ClipString(name);
         Mat image = cv::imread(data_dir + name, 1);
+        if (image.empty())
+        {
+            printf("Fail to load %s.\n", (data_dir + name).c_str());
+            return false;
+        }
         c_image_[0].push_back(image);
         c_label_[0].push_back(label);
     }
@@ -244,6 +263,7 @@ bool Dataset::LoadDetectLists(const string &data_dir)
     fclose(in_file);
     return true;
 }
+
 void Dataset::DrawRectAndLabel(const vector<Rect> &rects, const vector<int> &labels,
         Mat *image) const
 {

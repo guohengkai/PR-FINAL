@@ -9,11 +9,13 @@
 
 #include "common.h"
 #include "classifier.h"
+#include "dataset.h"
 
 namespace ghk
 {
 void Generate2dRandomData(int train_cnt, int test_cnt, Mat *data);
 void TestClassifier(Classifier *classifier, const string &tmp_dir);
+void TestDataset(Dataset &dataset);
 }  // namespace ghk
 
 #endif  // FINAL_TEST_CLASS_UTIL_

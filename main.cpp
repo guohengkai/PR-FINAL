@@ -9,11 +9,19 @@
 #include "test_class_util.h"
 #include "knn_classifier.h"
 #include "svm_classifier.h"
+#include "sign_classifier.h"
+#include "knn_sign_classifier.h"
 
 using namespace ghk;
 
 const string root_dir = "/home/ghk/Src/PR-HW/PR-FINAL";
 const string model_dir = "/model";
+
+void TestDataset()
+{
+    Dataset dataset(root_dir);
+    TestDataset(dataset);
+}
 
 void TestClassifier()
 {
@@ -22,26 +30,18 @@ void TestClassifier()
     TestClassifier(&classifier, root_dir + model_dir);
 }
 
+void TrainSignClassifier(SignClassifier *classifier)
+{
+    Dataset dataset(root_dir);
+    classifier->Train(dataset);
+}
+
 int main(int argc, char **argv)
 {
-    /*
-    Dataset dataset(root_dir);
-
-    const size_t idx = 72;
-    Mat test_image;
-    vector<Rect> rects;
-    vector<int> labels;
-    
-    dataset.GetFullImage(idx, &test_image);
-    dataset.GetDetectLabels(idx, &labels);
-    dataset.GetDetectRects(idx, &rects);
-
-    dataset.DrawRectAndLabel(rects, labels, &test_image);
-
-    cv::imshow("", test_image);
-    cv::waitKey(); */
-
-    TestClassifier();
+    // TestDataset();
+    // TestClassifier();
+    KnnSignClassifier classifier(false, 5);
+    TrainSignClassifier(&classifier);
 
     return 0;
 }

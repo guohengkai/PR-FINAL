@@ -55,6 +55,7 @@ bool EigenExtractor::Train(const vector<Mat> &images,
     }
 
     // PCA project
+    printf("Training PCA...\n");
     cv::PCA pca(image_vecs, Mat(), CV_PCA_DATA_AS_ROW);
 
     // Save the full project matrix
@@ -64,6 +65,7 @@ bool EigenExtractor::Train(const vector<Mat> &images,
     {
         set_feat_dim(image_vecs.cols);
     }
+    printf("Done!\n");
     return true;
 }
 
