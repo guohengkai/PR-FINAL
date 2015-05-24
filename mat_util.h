@@ -14,8 +14,10 @@ namespace ghk
 void Normalize(const Mat &normA, const Mat &normB,
         const Mat &feats, Mat *feats_norm);
 void TrainNormalize(const Mat &feats, Mat *normA, Mat *normB);
-void Mat2Vec(const Mat &mat, vector<int> *vec);
-void Vec2Mat(const vector<int> &vec, Mat *mat);
+template <typename T>
+void Mat2Vec(const Mat &mat, vector<T> *vec);
+template <typename T>
+void Vec2Mat(const vector<T> &vec, Mat *mat);
 bool Image2Vec(const vector<Mat> &images, Mat *image_vecs);
 int GetUniqueClassNum(const vector<int> &labels);
 }

@@ -3,7 +3,7 @@ PANDORA := .
 INCS := ./include /usr/local/include
 CPPFLAGS := -Wall -Wunreachable-code -Werror -Wsign-compare -g -fPIC -std=c++11
 LIBPATH = -L/usr/local/lib
-LIBS := $(LIBPATH) -lopencv_core -lopencv_nonfree -lopencv_features2d -lopencv_ml -lopencv_imgproc -lopencv_highgui -lopencv_contrib
+LIBS := $(LIBPATH) -lopencv_core -lopencv_nonfree -lopencv_ocl -lopencv_features2d -lopencv_ml -lopencv_imgproc -lopencv_highgui -lopencv_contrib -lopencv_gpu -lopencv_objdetect
 SOURCE := $(wildcard  ./*.cpp)
 OBJS := $(patsubst %.cpp, %.o, $(SOURCE))
 OBJSMAIN =  $(OBJS)

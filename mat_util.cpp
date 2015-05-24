@@ -23,16 +23,20 @@ void TrainNormalize(const Mat &feats, Mat *normA, Mat *normB)
     *normB -= *normA;
 }
 
-void Mat2Vec(const Mat &mat, vector<int> *vec)
+template <typename T>
+void Mat2Vec(const Mat &mat, vector<T> *vec)
 {
     vec->clear();
     for (int i = 0; i < mat.rows; ++i)
     {
-        vec->push_back(static_cast<int>(mat.at<float>(i, 0)));
+        vec->push_back(static_cast<T>(mat.at<float>(i, 0)));
     }
 }
+template void Mat2Vec<int>(const Mat &mat, vector<int> *vec);
+template void Mat2Vec<float>(const Mat &mat, vector<float> *vec);
 
-void Vec2Mat(const vector<int> &vec, Mat *mat)
+template <typename T>
+void Vec2Mat(const vector<T> &vec, Mat *mat)
 {
     *mat = Mat::zeros(0, 1, CV_32F);
     for (size_t i = 0; i < vec.size(); ++i)
@@ -40,6 +44,18 @@ void Vec2Mat(const vector<int> &vec, Mat *mat)
         mat->push_back(static_cast<float>(vec[i]));
     }
 }
+template void Vec2Mat<int>(const vector<int> &vec, Mat *mat);
+template void Vec2Mat<float>(const vector<float> &vec, Mat *mat);
+
+/*
+void Vec2Mat(const vector<float> &vec, Mat *mat)
+{
+    *mat = Mat::zeros(0, 1, CV_32F);
+    for (size_t i = 0; i < vec.size(); ++i)
+    {
+        mat->push_back(vec[i]);
+    }
+}*/
 
 bool Image2Vec(const vector<Mat> &images, Mat *image_vecs)
 {
