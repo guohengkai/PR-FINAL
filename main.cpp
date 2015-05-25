@@ -31,13 +31,12 @@ void TestClassifier()
     TestClassifier(&classifier, root_dir + model_dir);
 }
 
-void TrainSignClassifier(SignClassifier *classifier)
+void TrainSignClassifier(SignClassifier *classifier, const string &model_name)
 {
     Dataset dataset(root_dir);
-    const string model_name = "/knn_fisher";
     classifier->Train(dataset);
-    classifier->Save(root_dir + model_dir + model_name);
-    classifier->Load(root_dir + model_dir + model_name);
+    classifier->Save(root_dir + model_dir + '/' + model_name);
+    classifier->Load(root_dir + model_dir + '/' + model_name);
     classifier->Test(dataset);
 }
 
@@ -47,7 +46,7 @@ int main(int argc, char **argv)
     // TestClassifier();
     // KnnSignClassifier classifier(true, 5, 100, 30);
     HogSignClassifier classifier(125, 100);
-    TrainSignClassifier(&classifier);
+    TrainSignClassifier(&classifier, "hog");
 
     return 0;
 }
