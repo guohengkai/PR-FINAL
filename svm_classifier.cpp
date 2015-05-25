@@ -20,8 +20,9 @@ SvmClassifier::~SvmClassifier()
 
 bool SvmClassifier::Save(const string &model_name) const
 {
-    // Save the normalization parameters
-    if (!SaveMat(model_name + "_normA", normA_))
+    // Save the normalization parameters and penalty coefficient
+    vector<float> c(1, c_);
+    if (!SaveMat(model_name + "_normA", normA_, c))
     {
         return false;
     }
@@ -46,8 +47,9 @@ bool SvmClassifier::Save(const string &model_name) const
 
 bool SvmClassifier::Load(const string &model_name)
 {
-    // Load the normalization parameters
-    if (!LoadMat(model_name + "_normA", &normA_))
+    // Load the normalization parameters and penalty coefficient
+    vector<float> c;
+    if (!LoadMat(model_name + "_normA", &normA_, &c))
     {
         return false;
     }
@@ -55,6 +57,7 @@ bool SvmClassifier::Load(const string &model_name)
     {
         return false;
     }
+    c_ = c[0];
 
     // Load the SVM model
     if (svm_model_ != NULL)
@@ -143,7 +146,7 @@ void SvmClassifier::PrepareParameter(int feat_dim, svm_parameter *param) const
     param->coef0 = 0;
     param->nu = 0.5;
     param->cache_size = 100;
-    param->C = 125;
+    param->C = c_;
     param->eps = 1e-3;
     param->p = 0.1;
     param->shrinking = 1;

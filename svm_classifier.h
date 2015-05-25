@@ -16,7 +16,7 @@ namespace ghk
 class SvmClassifier: public Classifier
 {
 public:
-    SvmClassifier(): svm_model_(NULL) {}
+    explicit SvmClassifier(float c = 125): svm_model_(NULL), c_(c) {}
     ~SvmClassifier();
 
     virtual bool Save(const string &model_name) const;
@@ -27,6 +27,7 @@ public:
 
 private:
     svm_model *svm_model_;
+    float c_;  // Penalty coefficient
 
     // Normalization parameters: X' = (X - A) / B
     Mat normA_;

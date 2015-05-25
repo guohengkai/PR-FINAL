@@ -25,9 +25,12 @@ bool HogExtractor::Extract(const vector<Mat> &images, Mat *feats)
     for (auto image: images)
     {
         vector<float> feat_vec;
-        hog_.compute(image, feat_vec);
+        Mat image_char;
+        image.convertTo(image_char, CV_8U);
+        hog_.compute(image, feat_vec, image.size(), Size(0, 0), vector<Point>(1, Point(0, 0)));
         Mat feat_row;
         Vec2Mat(feat_vec, &feat_row);
+        feat_row = feat_row.t();
         feats->push_back(feat_row);
     }
     return true;

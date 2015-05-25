@@ -11,6 +11,7 @@
 #include "svm_classifier.h"
 #include "sign_classifier.h"
 #include "knn_sign_classifier.h"
+#include "hog_sign_classifier.h"
 
 using namespace ghk;
 
@@ -44,7 +45,8 @@ int main(int argc, char **argv)
 {
     // TestDataset();
     // TestClassifier();
-    KnnSignClassifier classifier(true, 5, 100, 30);
+    // KnnSignClassifier classifier(true, 5, 100, 30);
+    HogSignClassifier classifier(125, 32);
     TrainSignClassifier(&classifier);
 
     return 0;
