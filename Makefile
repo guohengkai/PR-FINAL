@@ -1,6 +1,6 @@
 CC := g++
 PANDORA := .
-INCS := ./thirdparty/libsvm /usr/local/include
+INCS := ./thirdparty/libsvm ./thirdparty/vlfeat /usr/local/include
 CPPFLAGS := -Wall -Wunreachable-code -Werror -Wsign-compare -g -fPIC -std=c++11
 LIBDIR = ./lib
 LIBPATH = -L/usr/local/lib

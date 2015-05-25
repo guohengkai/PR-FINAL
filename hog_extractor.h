@@ -9,6 +9,10 @@
 
 #include "common.h"
 #include "extractor.h"
+extern "C"
+{
+#include "hog.h"
+}
 
 namespace ghk
 {
@@ -16,13 +20,14 @@ class HogExtractor: public Extractor
 {
 public:
     HogExtractor();
+    ~HogExtractor();
 
     virtual bool Train(const vector<Mat> &images,
                 const vector<int> &labels) { return false; }
     virtual bool Extract(const vector<Mat> &images, Mat *feats);
 
 private:
-    cv::HOGDescriptor hog_;
+    VlHog *hog_;
 };
 }  // namespace ghk
 

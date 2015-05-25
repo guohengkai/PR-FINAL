@@ -61,14 +61,6 @@ bool HogSignClassifier::Train(const Dataset &dataset)
         cv::cvtColor(image, image, CV_BGR2GRAY);
         images.push_back(image);
         labels.push_back(dataset.GetClassifyLabel(true, i));
-        /*
-        auto m = labels.size();
-        if (labels[m - 1] > 2)
-        {
-            images.resize(m - 1);
-            labels.resize(m - 1);
-            break;
-        }*/
     }
 
     // Feature extraction
@@ -86,7 +78,6 @@ bool HogSignClassifier::Train(const Dataset &dataset)
     svm_classifier_.Predict(feats, &predict_labels);
     float rate, fp;
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
-    // EvaluateClassify(labels, predict_labels, 3, false, &rate, &fp);
     printf("Test on training rate: %0.2f%%\n", rate * 100);
 
     return true;
@@ -107,14 +98,6 @@ bool HogSignClassifier::Test(const Dataset &dataset)
         cv::cvtColor(image, image, CV_BGR2GRAY);
         images.push_back(image);
         labels.push_back(dataset.GetClassifyLabel(false, i));
-        /*
-        auto m = labels.size();
-        if (labels[m - 1] > 2)
-        {
-            images.resize(m - 1);
-            labels.resize(m - 1);
-            break;
-        }*/
     }
 
     // Test on test dataset
@@ -122,7 +105,6 @@ bool HogSignClassifier::Test(const Dataset &dataset)
     Predict(images, &predict_labels);
     float rate, fp;
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
-    // EvaluateClassify(labels, predict_labels, 3, false, &rate, &fp);
     printf("Test rate: %0.2f%%\n", rate * 100);
 
     return true;
