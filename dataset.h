@@ -25,6 +25,7 @@ const string NEG_DIR = "/neg";
 
 const int MAX_LINE = 255;
 const int DETECT_NAME_LENGTH = 25;  // length of image name for detection
+const float INTERSECT_UNION_RATE = 0.5;
 
 class Dataset
 {
@@ -38,6 +39,10 @@ public:
     bool GetDetectLabels(size_t idx, vector<int> *labels) const;
     bool GetDetectRects(size_t idx, vector<Rect> *rects) const;
     bool GetFullImage(size_t idx, Mat *image) const;
+
+    bool GetRandomNegImage(size_t neg_num, Size image_size,
+            vector<Mat> *images) const;
+    bool IsNegativeImage(size_t idx, const Rect &rect) const;
 
     void DrawRectAndLabel(const vector<Rect> &rects, const vector<int> &labels,
             Mat *image) const;

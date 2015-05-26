@@ -77,6 +77,12 @@ bool KnnClassifier::Train(const Mat &feats, const vector<int> &labels)
 
 bool KnnClassifier::Predict(const Mat &feats, vector<int> *labels) const
 {
+    return Predict(feats, labels, nullptr);
+}
+
+bool KnnClassifier::Predict(const Mat &feats,
+        vector<int> *labels, vector<float> *distances) const
+{
     if (labels == nullptr)
     {
         return false;
@@ -85,13 +91,15 @@ bool KnnClassifier::Predict(const Mat &feats, vector<int> *labels) const
     Mat feats_norm;
     Normalize(feats, &feats_norm);
 
-    labels->clear();
-    for (int i = 0; i < feats.rows; ++i)
+    Mat result, dis;
+    knn_.find_nearest(feats_norm, near_num_, &result, nullptr, nullptr, &dis);
+    Mat2Vec(result, labels);
+    // cout << dis << endl;
+    if (distances != nullptr)
     {
-        int result = static_cast<int>(knn_.find_nearest(
-                    feats_norm.row(i), near_num_));
-        labels->push_back(result);
+        Mat2Vec(dis, distances);
     }
+
     return true;
 }
 

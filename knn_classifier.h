@@ -22,7 +22,8 @@ public:
 
     virtual bool Train(const Mat &feats, const vector<int> &labels);
     virtual bool Predict(const Mat &feats, vector<int> *labels) const;
-
+    bool Predict(const Mat &feats, vector<int> *labels,
+            vector<float> *distances) const;
 private:
     CvKNearest knn_;
     int near_num_;

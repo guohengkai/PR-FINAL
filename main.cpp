@@ -26,8 +26,8 @@ void TestDataset()
 
 void TestClassifier()
 {
-    // KnnClassifier classifier(10);
-    SvmClassifier classifier;
+    KnnClassifier classifier(10);
+    // SvmClassifier classifier;
     TestClassifier(&classifier, root_dir + model_dir);
 }
 
@@ -44,9 +44,9 @@ int main(int argc, char **argv)
 {
     // TestDataset();
     // TestClassifier();
-    // KnnSignClassifier classifier(true, 5, 100, 30);
-    HogSignClassifier classifier(125, 100);
-    TrainSignClassifier(&classifier, "hog");
+    KnnSignClassifier classifier(true, 5, 100, 30);
+    // HogSignClassifier classifier(125, 100);
+    TrainSignClassifier(&classifier, "knn");
 
     return 0;
 }

@@ -38,6 +38,9 @@ private:
     FisherExtractor fisher_extractor_;
     KnnClassifier knn_classifier_;
     int img_size_;
+    float threshold_;
+
+    bool TrainThreshold(const Dataset &dataset);
 };
 }  // namespace ghk
 

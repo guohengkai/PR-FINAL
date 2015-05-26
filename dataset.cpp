@@ -41,7 +41,7 @@ Dataset::Dataset(const string &base_dir): base_dir_(base_dir)
 
     // Load negative classification data
     string data_dir = base_dir + CLASSIFY_DIR + NEG_DIR + "/";
-    if (!LoadClassifyImages(data_dir, 0, 0))
+    if (!LoadClassifyImages(data_dir, 0, -1))
     {
         return;
     }
@@ -126,6 +126,75 @@ bool Dataset::GetFullImage(size_t idx, Mat *image) const
     return true;
 }
 
+int random(int n)
+{
+    int result = rand();
+    return result % n;
+}
+size_t random(size_t n)
+{
+    int result = rand();
+    return result % n;
+}
+bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
+        vector<Mat> *images) const
+{
+    if (images == nullptr)
+    {
+        return false;
+    }
+
+    const int size_num = 5;
+    const int size_list[size_num] = {30, 50, 80, 100, 150};
+    
+    int iter = 0;
+    const int max_iter = 1000000;
+    while (images->size() < neg_num && iter <= max_iter)
+    {
+        size_t idx = random(GetFullImageNum());
+        Mat image;
+        GetFullImage(idx, &image);
+
+        int size_idx = random(size_num);
+        int size = size_list[size_idx];
+        int pos_x = random(image.cols - size + 1);
+        int pos_y = random(image.rows - size + 1);
+        
+        Rect rect(pos_x, pos_y, size, size);
+        if (IsNegativeImage(idx, rect))
+        {
+            image = image(rect);
+            cv::resize(image, image, image_size);
+            images->push_back(image);
+        }
+
+        ++iter;
+    }
+
+    if (iter > max_iter)
+    {
+        printf("Only %zu negative images.\n", images->size());
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+bool Dataset::IsNegativeImage(size_t idx, const Rect &rect) const
+{
+    for (auto pos: d_rect_[idx])
+    {
+        if (static_cast<float>((pos & rect).area()) / (pos | rect).area()
+                >= INTERSECT_UNION_RATE)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool Dataset::LoadLabelNames(const string &list_name)
 {
     FILE *in_file;
@@ -184,7 +253,12 @@ bool Dataset::LoadClassifyImages(const string &data_dir,
         c_label_[1].push_back(label);
     }
 
-    // Train images
+    // Train images or test images
+    int idx = 0;
+    if (test_num < 0)
+    {
+        idx = 1;
+    }
     while (fgets(name, MAX_LINE, in_file) != NULL)
     {
         ClipString(name);
@@ -194,12 +268,13 @@ bool Dataset::LoadClassifyImages(const string &data_dir,
             printf("Fail to load %s.\n", (data_dir + name).c_str());
             return false;
         }
-        c_image_[0].push_back(image);
-        c_label_[0].push_back(label);
+        c_image_[idx].push_back(image);
+        c_label_[idx].push_back(label);
     }
     fclose(in_file);
     return true;
 }
+
 bool Dataset::LoadDetectLists(const string &data_dir)
 {
     string list_name = data_dir + DETECT_ANNOTE_NAME;

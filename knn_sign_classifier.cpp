@@ -18,7 +18,7 @@ namespace ghk
 KnnSignClassifier::KnnSignClassifier(bool use_fisher,
             int near_num, int eigen_feat_num, int img_size):
             use_fisher_(use_fisher), eigen_extractor_(eigen_feat_num),
-            knn_classifier_(near_num), img_size_(img_size)
+            knn_classifier_(near_num), img_size_(img_size), threshold_(FLT_MAX)
 {
    if (use_fisher_) 
    {
@@ -42,6 +42,7 @@ bool KnnSignClassifier::Save(const string &model_name) const
         param.push_back(-1);
     }
     param.push_back(img_size_);
+    param.push_back(threshold_);
     if (!SaveMat(model_name + "_para", Mat(), param))
     {
         printf("Fail to save the parameter.\n");
@@ -81,6 +82,7 @@ bool KnnSignClassifier::Load(const string &model_name)
         extractor_ = &eigen_extractor_;
     }
     img_size_ = param[1];
+    threshold_ = param[2];
 
     if (!extractor_->Load(model_name + "_ext"))
     {
@@ -124,6 +126,14 @@ bool KnnSignClassifier::Train(const Dataset &dataset)
     // Train the KNN classifier
     printf("Training KNN classifier...\n");
     knn_classifier_.Train(feats, labels);
+
+    // Train the threshold
+    printf("Training the threshold...\n");
+    if (!TrainThreshold(dataset))
+    {
+        printf("Fail to train the threshold.\n");
+        return false;
+    }
     printf("Training done! Now testing...\n");
 
     // Test on training
@@ -157,7 +167,7 @@ bool KnnSignClassifier::Test(const Dataset &dataset)
     vector<int> predict_labels;
     Predict(images, &predict_labels);
     float rate, fp;
-    EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true, &rate, &fp);
     printf("Test rate: %0.2f%%\n", rate * 100);
 
     return true;
@@ -177,10 +187,54 @@ bool KnnSignClassifier::Predict(const vector<Mat> &images,
     extractor_->Extract(images, &feats);
 
     // Prediction
+    vector<float> distance;
     printf("Predicting with KNN...\n");
-    knn_classifier_.Predict(feats, labels);
+    knn_classifier_.Predict(feats, labels, &distance);
+    for (size_t i = 0; i < distance.size(); ++i)
+    {
+        if (distance[i] > threshold_)
+        {
+            (*labels)[i] = 0;
+        }
+    }
     printf("Prediction done!\n");
 
+    return true;
+}
+
+bool KnnSignClassifier::TrainThreshold(const Dataset &dataset)
+{
+    srand(time(NULL));
+    const size_t neg_num = 2000;
+    vector<Mat> neg_images;
+    Size img_size(img_size_, img_size_);
+    printf("Randomly getting negative samples...");
+    if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images))
+    {
+        printf("Fail to get negative samples.\n");
+        return false;
+    }
+
+    Mat feats;
+    printf("Extracting features...\n");
+    extractor_->Extract(neg_images, &feats);
+
+    vector<float> distance;
+    vector<int> labels;
+    printf("Getting distance with KNN...\n");
+    knn_classifier_.Predict(feats, &labels, &distance);
+
+    float mean = 0, deviation = 0;
+    for (auto dis: distance)
+    {
+        mean += dis;
+        deviation += dis * dis;
+    }
+    mean /= distance.size();
+    deviation = sqrt(deviation / distance.size() - mean * mean);
+    printf("Mean: %0.4f, Std: %0.4f\n", mean, deviation);
+    threshold_ = mean + 2 * deviation;
+    
     return true;
 }
 }  // namespace ghk
