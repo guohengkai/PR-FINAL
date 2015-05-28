@@ -9,7 +9,7 @@
 
 #include "classifier.h"
 #include "common.h"
-#include "svm.h"
+#include "libsvm/svm.h"
 
 namespace ghk
 {
