@@ -16,7 +16,7 @@ class Timer
 public:
     Timer();
     void Start();
-    float End();
+    float Snapshot();
 
     inline float time_use() { return time_use_; }
 

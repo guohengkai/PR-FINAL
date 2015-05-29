@@ -13,6 +13,7 @@
 #include "math_util.h"
 #include "file_util.h"
 #include "test_util.h"
+#include "timer.h"
 
 namespace ghk
 {
@@ -127,18 +128,26 @@ bool KnnSignClassifier::Train(const Dataset &dataset)
         labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
     }
 
+    Timer timer;
     // Train the extractor
     printf("Training extractor...\n");
+    timer.Start();
     extractor_->Train(images, labels);
+    float t1 = timer.Snapshot();
+    printf("Time for training extractor: %0.3fs\n", t1);
 
     // Feature extraction
     Mat feats;
     printf("Extracting features...\n");
     extractor_->Extract(images, &feats);
+    float t2 = timer.Snapshot();
+    printf("Time for extraction: %0.3fs\n", t2 - t1);
 
     // Train the KNN classifier
     printf("Training KNN classifier...\n");
     knn_classifier_.Train(feats, labels);
+    float t3 = timer.Snapshot();
+    printf("Time for training KNN: %0.3fs\n", t3 - t2);
 
     if (use_threshold_)
     {
@@ -155,7 +164,8 @@ bool KnnSignClassifier::Train(const Dataset &dataset)
         labels.erase(labels.begin() + neg_images.size(), labels.end());
         feats.resize(labels.size());
     }
-    printf("Training done! Now testing...\n");
+    float t4 = timer.Snapshot();
+    printf("Training done! Total %0.3fs. Now testing...\n", t4);
 
     // Test on training
     vector<int> predict_labels;
@@ -202,15 +212,21 @@ bool KnnSignClassifier::Predict(const vector<Mat> &images,
         return false;
     }
 
+    Timer timer;
     // Feature extraction
     Mat feats;
     printf("Extracting features...\n");
+    timer.Start();
     extractor_->Extract(images, &feats);
+    float t1 = timer.Snapshot();
+    printf("Time for extraction: %0.3fs\n", t1);
 
     // Prediction
     vector<float> distance;
     printf("Predicting with KNN...\n");
     knn_classifier_.Predict(feats, labels, &distance);
+    float t2 = timer.Snapshot();
+    printf("Time for classification: %0.3fs\n", t2 - t1);
     if (use_threshold_)
     {
         for (size_t i = 0; i < distance.size(); ++i)
@@ -221,7 +237,9 @@ bool KnnSignClassifier::Predict(const vector<Mat> &images,
             }
         }
     }
-    printf("Prediction done!\n");
+    float t3 = timer.Snapshot();
+    printf("Prediction done! Total time for %d images: %0.3fs\n",
+            feats.rows, t3);
 
     return true;
 }

@@ -10,6 +10,7 @@
 #include "svm_classifier.h"
 #include "file_util.h"
 #include "test_util.h"
+#include "timer.h"
 
 namespace ghk
 {
@@ -77,14 +78,20 @@ bool HogSignClassifier::Train(const Dataset &dataset)
     vector<int> neg_labels(neg_images.size(), 0);
     labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
 
+    Timer timer;
     // Feature extraction
     Mat feats;
     printf("Extracting features...\n");
+    timer.Start();
     hog_extractor_.Extract(images, &feats);
+    float t1 = timer.Snapshot();
+    printf("Time for extraction: %0.3fs\n", t1);
 
     // Train the SVM classifier
     printf("Training SVM classifier...\n");
     svm_classifier_.Train(feats, labels);
+    float t2 = timer.Snapshot();
+    printf("Time for training SVM: %0.3fs\n", t2 - t1);
     labels.erase(labels.begin() + labels.size() - neg_images.size(), labels.end());
     feats.resize(labels.size());
 
@@ -99,6 +106,7 @@ bool HogSignClassifier::Train(const Dataset &dataset)
     Test(dataset);
 
     // Mining hard negative sample
+    timer.Start();
     printf("Mining hard negative samples...\n");
     Mat neg_feats;
     if (!MiningHardSample(dataset, neg_num, img_size, &neg_feats))
@@ -106,6 +114,8 @@ bool HogSignClassifier::Train(const Dataset &dataset)
         printf("Fail to retrain SVM.\n");
         return true;  // Because the original model can be used
     }
+    float t3 = timer.Snapshot();
+    printf("Time for mining: %0.3fs\n", t3);
     neg_labels.resize(neg_feats.rows, 0);
     labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
     feats.push_back(neg_feats);
@@ -113,8 +123,11 @@ bool HogSignClassifier::Train(const Dataset &dataset)
     // Retrain SVM classifier
     printf("Retraining SVM classifier...\n");
     svm_classifier_.Train(feats, labels);
+    float t4 = timer.Snapshot();
+    printf("Time for retrain SVM: %0.3fs\n", t4 - t3);
     labels.erase(labels.begin() + labels.size() - neg_feats.rows, labels.end());
     feats.resize(labels.size());
+    printf("Total time: %0.3fs\n", t4 + t2);
 
     // Test on training again
     svm_classifier_.Predict(feats, &predict_labels);
@@ -159,15 +172,22 @@ bool HogSignClassifier::Predict(const vector<Mat> &images,
         return false;
     }
 
+    Timer timer;
     // Feature extraction
     Mat feats;
     printf("Extracting features...\n");
+    timer.Start();
     hog_extractor_.Extract(images, &feats);
+    float t1 = timer.Snapshot();
+    printf("Time for extration: %0.3fs\n", t1);
 
     // Prediction
     printf("Predicting with SVM...\n");
     svm_classifier_.Predict(feats, labels);
-    printf("Prediction done!\n");
+    float t2 = timer.Snapshot();
+    printf("Time for classification: %0.3fs\n", t2 - t1);
+    printf("Prediction done! Total time for %d images: %0.3fs\n",
+            feats.rows, t2);
 
     return true;
 }

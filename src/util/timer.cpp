@@ -20,7 +20,7 @@ void Timer::Start()
     time_use_ = 0;
 }
 
-float Timer::End()
+float Timer::Snapshot()
 {
     struct timeval end_time;
     gettimeofday(&end_time, NULL);
