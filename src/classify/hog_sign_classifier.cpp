@@ -63,6 +63,20 @@ bool HogSignClassifier::Train(const Dataset &dataset)
         labels.push_back(dataset.GetClassifyLabel(true, i));
     }
 
+    // Find random negative sample
+    srand(time(NULL));
+    vector<Mat> neg_images;
+    auto neg_num = images.size() / (CLASS_NUM - 1) * 2;
+    printf("Randomly getting negative samples...\n");
+    if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images))
+    {
+        printf("Fail to get negative samples.\n");
+        return false;
+    }
+    images.insert(images.end(), neg_images.begin(), neg_images.end());
+    vector<int> neg_labels(neg_images.size(), 0);
+    labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
+
     // Feature extraction
     Mat feats;
     printf("Extracting features...\n");
@@ -71,14 +85,41 @@ bool HogSignClassifier::Train(const Dataset &dataset)
     // Train the SVM classifier
     printf("Training SVM classifier...\n");
     svm_classifier_.Train(feats, labels);
-    printf("Training done! Now testing...\n");
+    labels.erase(labels.begin() + labels.size() - neg_images.size(), labels.end());
+    feats.resize(labels.size());
 
-    // Test on training
+    // Test on training before mining
     vector<int> predict_labels;
     svm_classifier_.Predict(feats, &predict_labels);
     float rate, fp;
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
-    printf("Test on training rate: %0.2f%%\n", rate * 100);
+    printf("Test on training rate before mining: %0.2f%%\n", rate * 100);
+
+    // Test on testing dataset
+    Test(dataset);
+
+    // Mining hard negative sample
+    printf("Mining hard negative samples...\n");
+    Mat neg_feats;
+    if (!MiningHardSample(dataset, neg_num, img_size, &neg_feats))
+    {
+        printf("Fail to retrain SVM.\n");
+        return true;  // Because the original model can be used
+    }
+    neg_labels.resize(neg_feats.rows, 0);
+    labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
+    feats.push_back(neg_feats);
+
+    // Retrain SVM classifier
+    printf("Retraining SVM classifier...\n");
+    svm_classifier_.Train(feats, labels);
+    labels.erase(labels.begin() + labels.size() - neg_feats.rows, labels.end());
+    feats.resize(labels.size());
+
+    // Test on training again
+    svm_classifier_.Predict(feats, &predict_labels);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
+    printf("Test on training rate after mining: %0.2f%%\n", rate * 100);
 
     return true;
 }
@@ -104,7 +145,7 @@ bool HogSignClassifier::Test(const Dataset &dataset)
     vector<int> predict_labels;
     Predict(images, &predict_labels);
     float rate, fp;
-    EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true, &rate, &fp);
     printf("Test rate: %0.2f%%\n", rate * 100);
 
     return true;
@@ -128,6 +169,72 @@ bool HogSignClassifier::Predict(const vector<Mat> &images,
     svm_classifier_.Predict(feats, labels);
     printf("Prediction done!\n");
 
+    return true;
+}
+
+bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
+        size_t neg_num, Size image_size, Mat *neg_feats)
+{
+    if (neg_feats == nullptr)
+    {
+        return false;
+    }
+
+    vector<size_t> image_idxs;
+    for (size_t i = 0; i < dataset.GetFullImageNum(); ++i)
+    {
+        image_idxs.push_back(i);
+    }
+    std::random_shuffle(image_idxs.begin(), image_idxs.end());
+
+    neg_feats->resize(0);
+    const int step = 10;
+    for (auto idx: image_idxs)
+    {
+        Mat full_image;
+        if (!dataset.GetFullImage(idx, &full_image))
+        {
+            continue;
+        }
+        
+        for (int x = 0; x < full_image.cols; x += step)
+            for (int y = 0; y < full_image.rows; y += step)
+                for (size_t size_idx = 0; size_idx < SIZE_LIST.size(); ++size_idx)
+                {
+                    int size = SIZE_LIST[size_idx];
+                    if (x + size >= full_image.cols || y + size >= full_image.rows)
+                    {
+                        break;
+                    }
+
+                    Rect rect(x, y, size, size);
+                    if (dataset.IsNegativeImage(idx, rect))
+                    {
+                        Mat image = full_image(rect).clone();
+                        cv::resize(image, image, image_size);
+                        cv::cvtColor(image, image, CV_BGR2GRAY);
+                        Mat feat_row;
+                        if (!hog_extractor_.ExtractFeat(image, &feat_row))
+                        {
+                            continue;
+                        }
+
+                        // False positive
+                        int res = svm_classifier_.PredictSample(feat_row);
+                        // cout << res << ",";
+                        if (res != 0)
+                        {
+                            neg_feats->push_back(feat_row);
+                            if (neg_feats->rows >= static_cast<int>(neg_num))
+                            {
+                                // cout << endl;
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+    }
     return true;
 }
 }  // namespace ghk

@@ -52,29 +52,47 @@ bool KnnClassifier::Load(const string &model_name)
 
 bool KnnClassifier::Train(const Mat &feats, const vector<int> &labels)
 {
+    return Train(feats, labels, true);
+}
+
+bool KnnClassifier::Train(const Mat &feats, const vector<int> &labels,
+        bool is_reset)
+{
     if (feats.rows != static_cast<int>(labels.size()))
     {
-        printf("KNN: dimension mismatch in training.\n");
+        printf("KNN: sample number mismatch in training.\n");
         return false;
     }
 
-    TrainNormalize(feats, &normA_, &normB_);
+    int m = feats.rows;
+    int n = feats.cols + 1;
+
+    if (!is_reset && model_.cols != n)
+    {
+        printf("KNN: feature dimension mismatch in training.\n");
+        return false;
+    }
+    if (is_reset)
+    {
+        model_ = Mat(0, n, CV_32F);
+        TrainNormalize(feats, &normA_, &normB_);
+    }
+
     Mat feats_norm;
     Normalize(feats, &feats_norm);
 
     Mat labels_mat;
     Vec2Mat(labels, &labels_mat);
+    knn_.train(feats_norm, labels_mat, Mat(), false, near_num_, !is_reset);
 
-    knn_.train(feats_norm, labels_mat, Mat(), false, near_num_, false);
+    Mat model = Mat(m, n, CV_32F);
+    feats_norm.copyTo(model.colRange(0, n - 1));
+    labels_mat.copyTo(model.col(n - 1));
+    model_.push_back(model);
 
-    int m = feats.rows;
-    int n = feats.cols + 1;
-    model_ = Mat(m, n, CV_32F);
-    feats_norm.copyTo(model_.colRange(0, n - 1));
-    labels_mat.copyTo(model_.col(n - 1));
     return true;
-}
 
+}
 bool KnnClassifier::Predict(const Mat &feats, vector<int> *labels) const
 {
     return Predict(feats, labels, nullptr);

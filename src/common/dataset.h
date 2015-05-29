@@ -15,6 +15,7 @@ namespace ghk
 {
 const int CLASS_NUM = 11;  // 0 for open-set test
 const int POS_C_TEST_NUM = 40;  // number of test images for each class
+const vector<int> SIZE_LIST = vector<int>{30, 50, 80, 100, 150};  // box size
 
 const string FILE_LIST_NAME = "filelist.txt";
 const string DETECT_ANNOTE_NAME = "annotations.txt";

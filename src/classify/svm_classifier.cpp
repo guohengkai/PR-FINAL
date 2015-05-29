@@ -73,6 +73,11 @@ void PrintNull(const char *s) {}
 
 bool SvmClassifier::Train(const Mat &feats, const vector<int> &labels)
 {
+    if (svm_model_ != NULL)
+    {
+        svm_free_and_destroy_model(&svm_model_);
+    }
+
     // Calculate the normalization parameters
     TrainNormalize(feats, &normA_, &normB_);
 

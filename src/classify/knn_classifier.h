@@ -21,6 +21,7 @@ public:
     virtual bool Load(const string &model_name);
 
     virtual bool Train(const Mat &feats, const vector<int> &labels);
+    bool Train(const Mat &feats, const vector<int> &labels, bool is_reset);
     virtual bool Predict(const Mat &feats, vector<int> *labels) const;
     bool Predict(const Mat &feats, vector<int> *labels,
             vector<float> *distances) const;

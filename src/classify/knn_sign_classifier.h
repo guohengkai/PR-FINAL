@@ -21,7 +21,8 @@ class KnnSignClassifier: public SignClassifier
 {
 public:
     KnnSignClassifier(bool use_fisher, int near_num,
-                      int eigen_feat_num = 0, int img_size = 50);
+                      int eigen_feat_num = 0, int img_size = 50,
+                      bool use_threshold = true);
 
     virtual bool Save(const string &model_name) const;
     virtual bool Load(const string &model_name);
@@ -39,6 +40,8 @@ private:
     KnnClassifier knn_classifier_;
     int img_size_;
     float threshold_;
+    bool use_threshold_;
+    size_t neg_num_;
 
     bool TrainThreshold(const Dataset &dataset);
 };

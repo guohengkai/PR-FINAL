@@ -8,7 +8,7 @@
 
 namespace ghk
 {
-bool Extractor::Extract(const Mat &image, Mat *feat)
+bool Extractor::ExtractFeat(const Mat &image, Mat *feat)
 {
     vector<Mat> image_vec(1, image);
     return Extract(image_vec, feat);

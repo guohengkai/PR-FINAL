@@ -33,6 +33,9 @@ private:
     HogExtractor hog_extractor_;
     SvmClassifier svm_classifier_;
     int img_size_;
+
+    bool MiningHardSample(const Dataset &dataset,
+            size_t neg_num, Size image_size, Mat *neg_feats);
 };
 }  // namespace ghk
 

@@ -7,6 +7,7 @@
 #include "dataset.h"
 #include <sstream>
 #include "common.h"
+#include "math_util.h"
 #include "file_util.h"
 
 namespace ghk
@@ -126,16 +127,6 @@ bool Dataset::GetFullImage(size_t idx, Mat *image) const
     return true;
 }
 
-int random(int n)
-{
-    int result = rand();
-    return result % n;
-}
-size_t random(size_t n)
-{
-    int result = rand();
-    return result % n;
-}
 bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
         vector<Mat> *images) const
 {
@@ -144,27 +135,26 @@ bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
         return false;
     }
 
-    const int size_num = 5;
-    const int size_list[size_num] = {30, 50, 80, 100, 150};
-    
     int iter = 0;
     const int max_iter = 1000000;
+    images->clear();
     while (images->size() < neg_num && iter <= max_iter)
     {
-        size_t idx = random(GetFullImageNum());
+        auto idx = Random(GetFullImageNum());
         Mat image;
         GetFullImage(idx, &image);
 
-        int size_idx = random(size_num);
-        int size = size_list[size_idx];
-        int pos_x = random(image.cols - size + 1);
-        int pos_y = random(image.rows - size + 1);
+        auto size_idx = Random(SIZE_LIST.size());
+        auto size = SIZE_LIST[size_idx];
+        auto pos_x = Random(image.cols - size + 1);
+        auto pos_y = Random(image.rows - size + 1);
         
         Rect rect(pos_x, pos_y, size, size);
         if (IsNegativeImage(idx, rect))
         {
             image = image(rect);
             cv::resize(image, image, image_size);
+            cv::cvtColor(image, image, CV_BGR2GRAY);
             images->push_back(image);
         }
 

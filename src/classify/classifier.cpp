@@ -8,7 +8,7 @@
 
 namespace ghk
 {
-int Classifier::Predict(const Mat &feat) const
+int Classifier::PredictSample(const Mat &feat) const
 {
     vector<int> label;
     if (!Predict(feat, &label))
