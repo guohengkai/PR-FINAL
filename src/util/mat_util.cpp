@@ -94,4 +94,14 @@ int GetUniqueClassNum(const vector<int> &labels)
     }
     return static_cast<int>(label_set.size());
 }
+
+void RotateImage(Mat &image, float angle_degree)
+{
+    int row = image.rows;
+    int col = image.cols;
+    Mat mat = cv::getRotationMatrix2D(cv::Point2f((col - 1.0) / 2,
+                                                  (row - 1.0) / 2),
+                                      angle_degree, 1.0);
+    cv::warpAffine(image, image, mat, image.size());
+}
 }  // namespace ghk

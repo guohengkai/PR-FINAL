@@ -20,6 +20,7 @@ template <typename T>
 void Vec2Mat(const vector<T> &vec, Mat *mat);
 bool Image2Vec(const vector<Mat> &images, Mat *image_vecs);
 int GetUniqueClassNum(const vector<int> &labels);
+void RotateImage(Mat &image, float angle_degree);
 }
 
 #endif  // FINAL_MAT_UTIL_H_
