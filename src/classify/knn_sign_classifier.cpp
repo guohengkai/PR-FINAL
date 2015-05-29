@@ -10,6 +10,7 @@
 #include "eigen_extractor.h"
 #include "fisher_extractor.h"
 #include "knn_classifier.h"
+#include "mat_util.h"
 #include "math_util.h"
 #include "file_util.h"
 #include "test_util.h"
@@ -110,6 +111,16 @@ bool KnnSignClassifier::Train(const Dataset &dataset)
         cv::cvtColor(image, image, CV_BGR2GRAY);
         images.push_back(image);
         labels.push_back(dataset.GetClassifyLabel(true, i));
+
+        // Augment using rotation
+        for (int j = 0; j < AUGMENT_TIMES; ++j)
+        {
+            Mat rot_img = image.clone();
+            RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
+                    - AUGMENT_ROTATE);
+            images.push_back(rot_img);
+            labels.push_back(labels[labels.size() - 1]);
+        }
     }
     if (!use_threshold_)
     {

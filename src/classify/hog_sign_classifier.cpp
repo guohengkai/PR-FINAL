@@ -8,6 +8,8 @@
 #include "dataset.h"
 #include "hog_extractor.h"
 #include "svm_classifier.h"
+#include "mat_util.h"
+#include "math_util.h"
 #include "file_util.h"
 #include "test_util.h"
 #include "timer.h"
@@ -62,12 +64,22 @@ bool HogSignClassifier::Train(const Dataset &dataset)
         cv::cvtColor(image, image, CV_BGR2GRAY);
         images.push_back(image);
         labels.push_back(dataset.GetClassifyLabel(true, i));
+
+        // Augment using rotation
+        for (int j = 0; j < AUGMENT_TIMES; ++j)
+        {
+            Mat rot_img = image.clone();
+            RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
+                    - AUGMENT_ROTATE);
+            images.push_back(rot_img);
+            labels.push_back(labels[labels.size() - 1]);
+        }
     }
 
     // Find random negative sample
     srand(time(NULL));
     vector<Mat> neg_images;
-    auto neg_num = images.size() / (CLASS_NUM - 1) * 2;
+    auto neg_num = n / (CLASS_NUM - 1) * 2;
     printf("Randomly getting negative samples...\n");
     if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images))
     {
@@ -209,6 +221,7 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
 
     neg_feats->resize(0);
     const int step = 10;
+    neg_num *= (AUGMENT_TIMES + 1);
     for (auto idx: image_idxs)
     {
         Mat full_image;
@@ -233,22 +246,37 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
                         Mat image = full_image(rect).clone();
                         cv::resize(image, image, image_size);
                         cv::cvtColor(image, image, CV_BGR2GRAY);
-                        Mat feat_row;
-                        if (!hog_extractor_.ExtractFeat(image, &feat_row))
+                        
+                        vector<Mat> image_vec(AUGMENT_TIMES + 1, image);
+                        for (int i = 0; i < AUGMENT_TIMES; ++i)
                         {
-                            continue;
+                            RotateImage(image_vec[i + 1],
+                                    Random(AUGMENT_ROTATE * 2 + 1)
+                                    - AUGMENT_ROTATE);
+                        }
+
+                        Mat feat_row;
+                        if (!hog_extractor_.Extract(image_vec, &feat_row))
+                        {
+                            return false;
                         }
 
                         // False positive
-                        int res = svm_classifier_.PredictSample(feat_row);
-                        // cout << res << ",";
-                        if (res != 0)
+                        vector<int> labels;
+                        if (!svm_classifier_.Predict(feat_row, &labels))
                         {
-                            neg_feats->push_back(feat_row);
-                            if (neg_feats->rows >= static_cast<int>(neg_num))
+                            return false;
+                        }
+
+                        for (size_t i = 0; i < labels.size(); ++i)
+                        {
+                            if (labels[i] != 0)
                             {
-                                // cout << endl;
-                                return true;
+                                neg_feats->push_back(feat_row.row(i));
+                                if (neg_feats->rows >= static_cast<int>(neg_num))
+                                {
+                                    return true;
+                                }
                             }
                         }
                     }
