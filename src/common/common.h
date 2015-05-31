@@ -14,6 +14,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <sstream>
 #include <vector>
 
 namespace ghk
@@ -27,6 +28,7 @@ using std::size_t;
 using std::map;
 using std::set;
 using std::string;
+using std::stringstream;
 using std::vector;
 using std::cout;
 using std::endl;

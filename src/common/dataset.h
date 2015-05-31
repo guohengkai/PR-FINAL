@@ -44,7 +44,7 @@ public:
     bool GetFullImage(size_t idx, Mat *image) const;
 
     bool GetRandomNegImage(size_t neg_num, Size image_size,
-            vector<Mat> *images) const;
+            vector<Mat> *images, bool is_augment = true) const;
     bool IsNegativeImage(size_t idx, const Rect &rect) const;
 
     void DrawRectAndLabel(const vector<Rect> &rects, const vector<int> &labels,

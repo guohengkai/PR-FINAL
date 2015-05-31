@@ -129,7 +129,7 @@ bool Dataset::GetFullImage(size_t idx, Mat *image) const
 }
 
 bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
-        vector<Mat> *images) const
+        vector<Mat> *images, bool is_augment) const
 {
     if (images == nullptr)
     {
@@ -138,7 +138,10 @@ bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
 
     int iter = 0;
     const int max_iter = 1000000;
-    neg_num *= (AUGMENT_TIMES + 1);
+    if (is_augment)
+    {
+        neg_num *= (AUGMENT_TIMES + 1);
+    }
     images->clear();
     while (images->size() < neg_num && iter <= max_iter)
     {
@@ -159,12 +162,15 @@ bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
             cv::cvtColor(image, image, CV_BGR2GRAY);
             images->push_back(image);
 
-            for (int i = 0; i < AUGMENT_TIMES; ++i)
+            if (is_augment)
             {
-                Mat rot_img = image.clone();
-                RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
-                        - AUGMENT_ROTATE);
-                images->push_back(rot_img);
+                for (int i = 0; i < AUGMENT_TIMES; ++i)
+                {
+                    Mat rot_img = image.clone();
+                    RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
+                            - AUGMENT_ROTATE);
+                    images->push_back(rot_img);
+                }
             }
         }
 

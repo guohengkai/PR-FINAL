@@ -255,6 +255,139 @@ bool KnnSignClassifier::Predict(const vector<Mat> &images,
     return true;
 }
 
+bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
+{
+    // Backup parameters
+    bool use_fisher_backup = use_fisher_;
+    bool use_threshold_backup = use_threshold_;
+    int img_size_backup = img_size_;
+
+    // Get training data
+    vector<Mat> images;
+    vector<Mat> neg_images;
+    vector<int> labels;
+    size_t n = dataset.GetClassifyNum(true);
+    Size img_size(img_size_, img_size_);
+    printf("Preparing training data...\n");
+    for (size_t i = 0; i < n; ++i)
+    {
+        Mat image;
+        dataset.GetClassifyImage(true, i, &image, img_size);
+        cv::cvtColor(image, image, CV_BGR2GRAY);
+        images.push_back(image);
+        labels.push_back(dataset.GetClassifyLabel(true, i));
+
+        // Augment using rotation
+        for (int j = 0; j < AUGMENT_TIMES; ++j)
+        {
+            Mat rot_img = image.clone();
+            RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
+                    - AUGMENT_ROTATE);
+            images.push_back(rot_img);
+            labels.push_back(labels[labels.size() - 1]);
+        }
+    }
+
+    // Find negative sample
+    srand(time(NULL));
+    printf("Randomly getting negative samples...\n");
+    if (!dataset.GetRandomNegImage(neg_num_ / 5, img_size, &neg_images))
+    {
+        printf("Fail to get negative samples.\n");
+        return false;
+    }
+    vector<int> neg_labels(neg_images.size(), 0);
+
+    // Get test data
+    vector<Mat> test_images;
+    vector<int> test_labels;
+    size_t test_n = dataset.GetClassifyNum(false);
+    printf("Preparing testing data...\n");
+    for (size_t i = 0; i < test_n; ++i)
+    {
+        Mat image;
+        dataset.GetClassifyImage(false, i, &image, img_size);
+        cv::cvtColor(image, image, CV_BGR2GRAY);
+        test_images.push_back(image);
+        test_labels.push_back(dataset.GetClassifyLabel(false, i));
+    }
+
+    // Test of component number for eigen feature
+    set_use_fisher(false);
+    printf("Training for different component number...\n");
+    extractor_->Train(images, labels);
+    Mat num_result_eigen(0, 4, CV_32F);
+    for (int i = 1; i <= img_size_ * img_size_; ++i)
+    {
+        if (i % 20 == 1)
+        {
+            printf("%d, ", i);
+            fflush(stdout);
+        }
+
+        Mat feats;
+        extractor_->set_feat_dim(i);
+        extractor_->Extract(images, &feats);
+        knn_classifier_.Train(feats, labels);
+
+        Mat result_row(1, 4, CV_32F);
+        vector<int> predict_labels;
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+        extractor_->Extract(test_images, &feats);
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(test_labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+        num_result_eigen.push_back(result_row);
+    }
+    printf("\n");
+    printf("Done! Saving...");
+    SaveMat(dir + "/num_result_eigen", num_result_eigen);
+
+    // Test of nearest neighbour number for eigen feature
+
+    // Test of nearest neighbour number for fisher feature
+
+    // Test of image size for eigen feature
+
+    // Test of image size for fisher feature
+    
+    images.insert(images.end(), neg_images.begin(), neg_images.end());
+    labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
+    // Test of open-set methods for eigen feature
+
+
+    // Test of open-set methods for fisher feature
+
+    // Best results for eigen feature
+    
+    // Best results for fisher feature
+
+    // Restore parameters
+    set_use_fisher(use_fisher_backup);
+    use_threshold_ = use_threshold_backup;
+    img_size_ = img_size_backup;
+
+    return true;
+}
+
+void KnnSignClassifier::set_use_fisher(bool use_fisher)
+{
+    if (use_fisher != use_fisher_)
+    {
+        use_fisher_ = use_fisher;
+        if (use_fisher_)
+        {
+            extractor_ = &fisher_extractor_;
+        }
+        else
+        {
+            extractor_ = &eigen_extractor_;
+        }
+    }
+}
+
 bool KnnSignClassifier::TrainThreshold(const Dataset &dataset)
 {
     srand(time(NULL));

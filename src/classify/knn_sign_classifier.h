@@ -32,6 +32,9 @@ public:
     virtual bool Predict(const vector<Mat> &images,
             vector<int> *labels);
 
+    virtual bool FullTest(const Dataset &dataset, const string &dir);
+    void set_use_fisher(bool use_fisher);
+
 private:
     bool use_fisher_;
     Extractor *extractor_;

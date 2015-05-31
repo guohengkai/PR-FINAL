@@ -125,5 +125,17 @@ void TestDataset(Dataset &dataset)
     dataset.GetClassifyImage(true, idx, &test_image, Size(200, 200));
     cv::imshow("", test_image);
     cv::waitKey();
+
+    vector<Mat> neg_images;
+    dataset.GetRandomNegImage(100, Size(100, 100), &neg_images, false);
+    int n = 0;
+    for (auto image: neg_images)
+    {
+        ++n;
+        stringstream ss;
+        ss << n;
+        cv::imwrite("/home/ghk/Src/PR-HW/PR-FINAL/data/self-neg/"
+                + ss.str() + ".jpg", image);
+    }
 }
 }  // namespace ghk

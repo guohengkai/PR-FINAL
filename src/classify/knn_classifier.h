@@ -25,6 +25,9 @@ public:
     virtual bool Predict(const Mat &feats, vector<int> *labels) const;
     bool Predict(const Mat &feats, vector<int> *labels,
             vector<float> *distances) const;
+
+    inline void set_near_num(int near_num) { near_num_ = near_num; }
+
 private:
     CvKNearest knn_;
     int near_num_;

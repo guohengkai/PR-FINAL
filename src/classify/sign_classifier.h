@@ -22,6 +22,8 @@ public:
     virtual bool Test(const Dataset &dataset) { return false; }
     virtual bool Predict(const vector<Mat> &images,
             vector<int> *labels) = 0;
+    virtual bool FullTest(const Dataset &dataset,
+            const string &dir) { return false; }
     int Predict(const Mat &image);
 };
 }  // namespace ghk

@@ -17,6 +17,7 @@ using namespace ghk;
 
 const string root_dir = "/home/ghk/Src/PR-HW/PR-FINAL";
 const string model_dir = "/model";
+const string result_dir = "/result";
 
 void TestDataset()
 {
@@ -40,13 +41,19 @@ void TrainSignClassifier(SignClassifier *classifier, const string &model_name)
     classifier->Test(dataset);
 }
 
+void FullTest(SignClassifier *classifier)
+{
+    Dataset dataset(root_dir);
+    classifier->FullTest(dataset, root_dir + result_dir);
+}
+
 int main(int argc, char **argv)
 {
     // TestDataset();
     // TestClassifier();
-    // KnnSignClassifier classifier(true, 5, 100, 30, false);
-    HogSignClassifier classifier(125, 100);
-    TrainSignClassifier(&classifier, "hog_neg");
-
+    KnnSignClassifier classifier(true, 5, 100, 50, false);
+    // HogSignClassifier classifier(125, 100);
+    // TrainSignClassifier(&classifier, "hog_neg");
+    FullTest(&classifier);
     return 0;
 }
