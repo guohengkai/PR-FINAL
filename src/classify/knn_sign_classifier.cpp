@@ -269,6 +269,7 @@ bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
     size_t n = dataset.GetClassifyNum(true);
     Size img_size(img_size_, img_size_);
     printf("Preparing training data...\n");
+    Mat rotate_angle(n, AUGMENT_TIMES, CV_32F);
     for (size_t i = 0; i < n; ++i)
     {
         Mat image;
@@ -281,8 +282,9 @@ bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
         for (int j = 0; j < AUGMENT_TIMES; ++j)
         {
             Mat rot_img = image.clone();
-            RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
-                    - AUGMENT_ROTATE);
+            rotate_angle.at<float>(i, j) = 
+                Random(AUGMENT_ROTATE * 2 + 1) - AUGMENT_ROTATE;
+            RotateImage(rot_img, rotate_angle.at<float>(i, j));
             images.push_back(rot_img);
             labels.push_back(labels[labels.size() - 1]);
         }
@@ -312,18 +314,16 @@ bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
         test_labels.push_back(dataset.GetClassifyLabel(false, i));
     }
 
-    // Test of component number for eigen feature
+    // Test of component number for eigen feature (best: 180)
     set_use_fisher(false);
-    printf("Training for different component number...\n");
+    printf("Training for different component number with eigen...\n");
     extractor_->Train(images, labels);
     Mat num_result_eigen(0, 4, CV_32F);
-    for (int i = 1; i <= img_size_ * img_size_; ++i)
+    const int step = 10;
+    for (int i = step; i <= img_size_ * img_size_; i += step)
     {
-        if (i % 20 == 1)
-        {
-            printf("%d, ", i);
-            fflush(stdout);
-        }
+        printf("%d, ", i);
+        fflush(stdout);
 
         Mat feats;
         extractor_->set_feat_dim(i);
@@ -342,27 +342,393 @@ bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
         num_result_eigen.push_back(result_row);
     }
     printf("\n");
-    printf("Done! Saving...");
+    printf("Done! Saving...\n");
     SaveMat(dir + "/num_result_eigen", num_result_eigen);
-
-    // Test of nearest neighbour number for eigen feature
-
-    // Test of nearest neighbour number for fisher feature
-
-    // Test of image size for eigen feature
-
-    // Test of image size for fisher feature
     
+    // Test of nearest neighbour number for eigen feature (best: 5)
+    set_use_fisher(false);
+    printf("Training for different neighbour number with eigen...\n");
+    extractor_->Train(images, labels);
+    Mat feats;
+    extractor_->Extract(images, &feats);
+    Mat test_feats;
+    extractor_->Extract(test_images, &test_feats);
+    Mat nearest_result_eigen(0, 4, CV_32F);
+    for (int i = 1; i < 102; i += 2)
+    {
+        printf("%d, ", i);
+        fflush(stdout);
+
+        knn_classifier_.set_near_num(i);
+        knn_classifier_.Train(feats, labels);
+
+        Mat result_row(1, 4, CV_32F);
+        vector<int> predict_labels;
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+        knn_classifier_.Predict(test_feats, &predict_labels);
+        EvaluateClassify(test_labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+        nearest_result_eigen.push_back(result_row);
+    }
+    printf("\n");
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/nearest_result_eigen", nearest_result_eigen);
+
+    // Test of nearest neighbour number for fisher feature (best: 7)
+    set_use_fisher(true);
+    printf("Training for different neighbour number with fisher...\n");
+    extractor_->Train(images, labels);
+    extractor_->Extract(images, &feats);
+    extractor_->Extract(test_images, &test_feats);
+    Mat nearest_result_fisher(0, 4, CV_32F);
+    for (int i = 1; i < 102; i += 2)
+    {
+        printf("%d, ", i);
+        fflush(stdout);
+
+        knn_classifier_.set_near_num(i);
+        knn_classifier_.Train(feats, labels);
+
+        Mat result_row(1, 4, CV_32F);
+        vector<int> predict_labels;
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+        knn_classifier_.Predict(test_feats, &predict_labels);
+        EvaluateClassify(test_labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+        nearest_result_fisher.push_back(result_row);
+    }
+    printf("\n");
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/nearest_result_fisher", nearest_result_fisher);
+
+    // Test of image size
+    printf("Training for different image size...");
+    vector<Mat> size_train_img;
+    vector<Mat> size_test_img;
+    Mat size_result[2];
+    for (int size = 10; size <= 150; size += 10)
+    {
+        printf("%d, ", size);
+        fflush(stdout);
+
+        size_train_img.clear();
+        size_test_img.clear();
+        Size img_size(size, size);
+
+        for (size_t i = 0; i < n; ++i)
+        {
+            Mat image;
+            dataset.GetClassifyImage(true, i, &image, img_size);
+            cv::cvtColor(image, image, CV_BGR2GRAY);
+            size_train_img.push_back(image);
+
+            // Augment using rotation
+            for (int j = 0; j < AUGMENT_TIMES; ++j)
+            {
+                Mat rot_img = image.clone();
+                RotateImage(rot_img, rotate_angle.at<float>(i, j));
+                size_train_img.push_back(rot_img);
+            }
+        }
+        for (size_t i = 0; i < test_n; ++i)
+        {
+            Mat image;
+            dataset.GetClassifyImage(false, i, &image, img_size);
+            cv::cvtColor(image, image, CV_BGR2GRAY);
+            size_test_img.push_back(image);
+        }
+
+        Mat feats;
+        Mat result_row(1, 4, CV_32F);
+        vector<int> predict_labels;
+
+        set_use_fisher(false);
+        extractor_->Train(size_train_img, labels);
+        extractor_->Extract(size_train_img, &feats);
+        knn_classifier_.Train(feats, labels);
+
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+        extractor_->Extract(size_test_img, &feats);
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(test_labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+        size_result[0].push_back(result_row);
+
+        set_use_fisher(true);
+        extractor_->Train(size_train_img, labels);
+        extractor_->Extract(size_train_img, &feats);
+        knn_classifier_.Train(feats, labels);
+
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+        extractor_->Extract(size_test_img, &feats);
+        knn_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(test_labels, predict_labels, CLASS_NUM, false,
+                &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+        size_result[1].push_back(result_row);
+    }
+    printf("\n");
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/size_result_eigen", size_result[0]);
+    SaveMat(dir + "/size_result_fisher", size_result[1]);
+
+    // Test of open-set methods for eigen feature using threshold
+    Mat th_result_eigen(0, 4, CV_32F);
+    printf("Training for different threshold with eigen...\n");
+    set_use_fisher(false);
+    extractor_->Train(images, labels);
+    extractor_->Extract(images, &feats);
+    knn_classifier_.Train(feats, labels);
+
+    Mat neg_feats;
+    extractor_->Extract(neg_images, &neg_feats);
+    vector<float> neg_distance;
+    vector<int> neg_train_labels;
+    knn_classifier_.Predict(neg_feats, &neg_train_labels, &neg_distance);
+    float mean = 0, deviation = 0;
+    for (auto dis: neg_distance)
+    {
+        mean += dis;
+        deviation += dis * dis;
+    }
+    mean /= neg_distance.size();
+    deviation = sqrt(deviation / neg_distance.size() - mean * mean);
+
+    extractor_->Extract(test_images, &test_feats);
+
+    Mat result_row(1, 4, CV_32F);
+    vector<int> predict_labels;
+    vector<float> train_dis;
+    knn_classifier_.Predict(feats, &predict_labels, &train_dis);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+    vector<int> test_predict_labels;
+    vector<float> test_dis;
+    knn_classifier_.Predict(test_feats, &test_predict_labels, &test_dis);
+    EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
+            &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+    th_result_eigen.push_back(result_row);
+
+    for (float rate = 0; rate <= 5; rate += 0.5)
+    {
+        printf("%0.1f, ", rate);
+        fflush(stdout);
+
+        threshold_ = mean + rate * deviation;
+        vector<int> temp_labels;
+        for (size_t i = 0; i < train_dis.size(); ++i)
+        {
+            if (train_dis[i] > threshold_)
+            {
+                temp_labels.push_back(0);
+            }
+            else
+            {
+                temp_labels.push_back(predict_labels[i]);
+            }
+        }
+        EvaluateClassify(labels, temp_labels, CLASS_NUM, true,
+                &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+        temp_labels.clear();
+        for (size_t i = 0; i < test_dis.size(); ++i)
+        {
+            if (test_dis[i] > threshold_)
+            {
+                temp_labels.push_back(0);
+            }
+            else
+            {
+                temp_labels.push_back(test_predict_labels[i]);
+            }
+        }
+        EvaluateClassify(test_labels, temp_labels, CLASS_NUM, true,
+                &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+        th_result_eigen.push_back(result_row);
+    }
+    printf("\n");
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/th_result_eigen", th_result_eigen);
+
+    // Test of open-set methods for fisher feature using threshold
+    Mat th_result_fisher(0, 4, CV_32F);
+    printf("Training for different threshold with fisher...\n");
+    set_use_fisher(true);
+    extractor_->Train(images, labels);
+    extractor_->Extract(images, &feats);
+    knn_classifier_.Train(feats, labels);
+
+    extractor_->Extract(neg_images, &neg_feats);
+    knn_classifier_.Predict(neg_feats, &neg_train_labels, &neg_distance);
+    mean = 0;
+    deviation = 0;
+    for (auto dis: neg_distance)
+    {
+        mean += dis;
+        deviation += dis * dis;
+    }
+    mean /= neg_distance.size();
+    deviation = sqrt(deviation / neg_distance.size() - mean * mean);
+
+    extractor_->Extract(test_images, &test_feats);
+
+    knn_classifier_.Predict(feats, &predict_labels, &train_dis);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+    knn_classifier_.Predict(test_feats, &test_predict_labels, &test_dis);
+    EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
+            &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+    th_result_fisher.push_back(result_row);
+
+    for (float rate = 0; rate <= 5; rate += 0.5)
+    {
+        printf("%0.1f, ", rate);
+        fflush(stdout);
+
+        threshold_ = mean + rate * deviation;
+        vector<int> temp_labels;
+        for (size_t i = 0; i < train_dis.size(); ++i)
+        {
+            if (train_dis[i] > threshold_)
+            {
+                temp_labels.push_back(0);
+            }
+            else
+            {
+                temp_labels.push_back(predict_labels[i]);
+            }
+        }
+        EvaluateClassify(labels, temp_labels, CLASS_NUM, true,
+                &result_row.at<float>(0, 0), &result_row.at<float>(0, 1));
+        temp_labels.clear();
+        for (size_t i = 0; i < test_dis.size(); ++i)
+        {
+            if (test_dis[i] > threshold_)
+            {
+                temp_labels.push_back(0);
+            }
+            else
+            {
+                temp_labels.push_back(test_predict_labels[i]);
+            }
+        }
+        EvaluateClassify(test_labels, temp_labels, CLASS_NUM, true,
+                &result_row.at<float>(0, 2), &result_row.at<float>(0, 3));
+        th_result_fisher.push_back(result_row);
+    }
+    printf("\n");
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/th_result_fisher", th_result_fisher);
+
+    // Test of open-set methods for eigen feature using negative class
     images.insert(images.end(), neg_images.begin(), neg_images.end());
     labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
-    // Test of open-set methods for eigen feature
+    printf("Training for negative class with eigen...\n");
+    set_use_fisher(false);
+    extractor_->Train(images, labels);
+    extractor_->Extract(images, &feats);
+    knn_classifier_.Train(feats, labels);
+    labels.erase(labels.begin() + neg_images.size(), labels.end());
+    feats.resize(labels.size());
+    extractor_->Extract(test_images, &test_feats);
 
+    Mat neg_result_eigen(1, 4, CV_32F);
+    knn_classifier_.Predict(feats, &predict_labels);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &neg_result_eigen.at<float>(0, 0),
+            &neg_result_eigen.at<float>(0, 1));
+    knn_classifier_.Predict(test_feats, &test_predict_labels);
+    EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
+            &neg_result_eigen.at<float>(0, 2),
+            &neg_result_eigen.at<float>(0, 3));
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/neg_result_eigen", neg_result_eigen);
 
-    // Test of open-set methods for fisher feature
+    // Test of open-set methods for fisher feature using negative class
+    images.insert(images.end(), neg_images.begin(), neg_images.end());
+    labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
+    printf("Training for negative class with fisher...\n");
+    set_use_fisher(true);
+    extractor_->Train(images, labels);
+    extractor_->Extract(images, &feats);
+    knn_classifier_.Train(feats, labels);
+    labels.erase(labels.begin() + neg_images.size(), labels.end());
+    feats.resize(labels.size());
+    extractor_->Extract(test_images, &test_feats);
+
+    Mat neg_result_fisher(1, 4, CV_32F);
+    knn_classifier_.Predict(feats, &predict_labels);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &neg_result_fisher.at<float>(0, 0),
+            &neg_result_fisher.at<float>(0, 1));
+    knn_classifier_.Predict(test_feats, &test_predict_labels);
+    EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
+            &neg_result_fisher.at<float>(0, 2),
+            &neg_result_fisher.at<float>(0, 3));
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/neg_result_fisher", neg_result_fisher);
 
     // Best results for eigen feature
+    printf("Training for best result with eigen...\n");
+    set_use_fisher(false);
+    extractor_->Train(images, labels);
+    extractor_->Extract(images, &feats);
+    knn_classifier_.Train(feats, labels);
+    extractor_->Extract(test_images, &test_feats);
+
+    knn_classifier_.Predict(feats, &predict_labels);
+    Mat result_mat_train_eigen;
+    vector<float> best_result_train_eigen(2, 0);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &best_result_train_eigen[0],
+            &best_result_train_eigen[1],
+            &result_mat_train_eigen);
+    knn_classifier_.Predict(test_feats, &test_predict_labels);
+    Mat result_mat_test_eigen;
+    vector<float> best_result_test_eigen(2, 0);
+    EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
+            &best_result_test_eigen[0],
+            &best_result_test_eigen[1],
+            &result_mat_test_eigen);
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/best_result_train_eigen",
+            result_mat_train_eigen, best_result_train_eigen);
+    SaveMat(dir + "/best_result_test_eigen",
+            result_mat_test_eigen, best_result_test_eigen);
     
     // Best results for fisher feature
+    printf("Training for best result with fisher...\n");
+    set_use_fisher(true);
+    extractor_->Train(images, labels);
+    extractor_->Extract(images, &feats);
+    knn_classifier_.Train(feats, labels);
+    extractor_->Extract(test_images, &test_feats);
+
+    knn_classifier_.Predict(feats, &predict_labels);
+    Mat result_mat_train_fisher;
+    vector<float> best_result_train_fisher(2, 0);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &best_result_train_fisher[0],
+            &best_result_train_fisher[1],
+            &result_mat_train_fisher);
+    knn_classifier_.Predict(test_feats, &test_predict_labels);
+    Mat result_mat_test_fisher;
+    vector<float> best_result_test_fisher(2, 0);
+    EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
+            &best_result_test_fisher[0],
+            &best_result_test_fisher[1],
+            &result_mat_test_fisher);
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/best_result_train_fisher",
+            result_mat_train_fisher, best_result_train_fisher);
+    SaveMat(dir + "/best_result_test_fisher",
+            result_mat_test_fisher, best_result_test_fisher);
 
     // Restore parameters
     set_use_fisher(use_fisher_backup);
