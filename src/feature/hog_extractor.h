@@ -19,15 +19,22 @@ namespace ghk
 class HogExtractor: public Extractor
 {
 public:
-    HogExtractor();
+    HogExtractor(int num_orient = 8, int cell_size = 8);
     ~HogExtractor();
 
+    virtual bool Save(const string &model_name) const;
+    virtual bool Load(const string &model_name);
     virtual bool Train(const vector<Mat> &images,
                 const vector<int> &labels) { return false; }
     virtual bool Extract(const vector<Mat> &images, Mat *feats);
 
+    inline void set_num_orient(int num_orient) { num_orient_ = num_orient; }
+    inline void set_cell_size(int cell_size) { cell_size_ = cell_size; }
+
 private:
     VlHog *hog_;
+    int num_orient_;
+    int cell_size_;
 };
 }  // namespace ghk
 

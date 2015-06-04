@@ -10,17 +10,56 @@ extern "C"
 #include "hog.h"
 }
 #include "mat_util.h"
+#include "file_util.h"
 
 namespace ghk
 {
-HogExtractor::HogExtractor()
+HogExtractor::HogExtractor(int num_orient, int cell_size):
+    num_orient_(num_orient), cell_size_(cell_size)
 {
-    hog_ = vl_hog_new(VlHogVariantDalalTriggs, 8, VL_FALSE);
+    hog_ = vl_hog_new(VlHogVariantDalalTriggs, num_orient_, VL_FALSE);
 }
 
 HogExtractor::~HogExtractor()
 {
-    vl_hog_delete(hog_);
+    if (hog_ != nullptr)
+    {
+        vl_hog_delete(hog_);
+    }
+}
+
+bool HogExtractor::Save(const string &model_name) const
+{
+    vector<float> param;
+    param.push_back(num_orient_);
+    param.push_back(cell_size_);
+
+    if (!SaveMat(model_name + "_para", Mat(), param))
+    {
+        printf("Fail to save the parameter.\n");
+        return false;
+    }
+    return true;
+}
+
+bool HogExtractor::Load(const string &model_name)
+{
+    vector<float> param;
+    Mat tmp;
+    if (!LoadMat(model_name + "_para", &tmp, &param))
+    {
+        printf("Fail to load the parameter.\n");
+        return false;
+    }
+    num_orient_ = param[0];
+    cell_size_ = param[1];
+
+    if (hog_ != nullptr)
+    {
+        vl_hog_delete(hog_);
+    }
+    hog_ = vl_hog_new(VlHogVariantDalalTriggs, num_orient_, VL_FALSE);
+    return true;
 }
 
 bool HogExtractor::Extract(const vector<Mat> &images, Mat *feats)
@@ -44,7 +83,7 @@ bool HogExtractor::Extract(const vector<Mat> &images, Mat *feats)
 
         // Extract HOG features
         vl_hog_put_image(hog_, image_data, image.rows, image.cols,
-                image.channels(), 8);
+                image.channels(), cell_size_);
         set_feat_dim(vl_hog_get_width(hog_) * vl_hog_get_height(hog_)
                 * vl_hog_get_dimension(hog_));
         float *hog_arr = (float*)vl_malloc(feat_dim() * sizeof(float));
