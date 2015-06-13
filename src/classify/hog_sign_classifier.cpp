@@ -204,6 +204,154 @@ bool HogSignClassifier::Predict(const vector<Mat> &images,
     return true;
 }
 
+bool HogSignClassifier::FullTest(const Dataset &dataset,
+        const string &dir)
+{
+    // Get training data
+    vector<Mat> images;
+    vector<int> labels;
+    size_t n = dataset.GetClassifyNum(true);
+    Size image_size(img_size_, img_size_);
+    printf("Preparing training data...\n");
+    Mat rotate_angle(n, AUGMENT_TIMES, CV_32F);
+    for (size_t i = 0; i < n; ++i)
+    {
+        Mat image;
+        dataset.GetClassifyImage(true, i, &image, image_size);
+        cv::cvtColor(image, image, CV_BGR2GRAY);
+        images.push_back(image);
+        labels.push_back(dataset.GetClassifyLabel(true, i));
+
+        // Augment using rotation
+        for (int j = 0; j < AUGMENT_TIMES; ++j)
+        {
+            Mat rot_img = image.clone();
+            rotate_angle.at<float>(i, j) = 
+                Random(AUGMENT_ROTATE * 2 + 1) - AUGMENT_ROTATE;
+            RotateImage(rot_img, rotate_angle.at<float>(i, j));
+            images.push_back(rot_img);
+            labels.push_back(labels[labels.size() - 1]);
+        }
+    }
+
+    // Find random negative sample
+    vector<Mat> neg_images;
+    auto neg_num = n / (CLASS_NUM - 1) * 2;
+    printf("Randomly getting negative samples...\n");
+    if (!dataset.GetRandomNegImage(neg_num, Size(150, 150), &neg_images))
+    {
+        printf("Fail to get negative samples.\n");
+        return false;
+    }
+    vector<int> neg_labels(neg_images.size(), 0);
+
+    // Get test data
+    vector<Mat> test_images;
+    vector<int> test_labels;
+    size_t test_n = dataset.GetClassifyNum(false);
+    printf("Preparing testing data...\n");
+    for (size_t i = 0; i < test_n; ++i)
+    {
+        Mat image;
+        dataset.GetClassifyImage(false, i, &image, image_size);
+        cv::cvtColor(image, image, CV_BGR2GRAY);
+        test_images.push_back(image);
+        test_labels.push_back(dataset.GetClassifyLabel(false, i));
+    }
+
+    // Test for different number of orientation and size of cell
+    Mat hog_result(0, 4, CV_32F);
+    printf("Training for different HOG parameters...\n");
+    // for (int size = 10; size <= 150; size += 10)
+    for (int size = 50; size <= 50; size += 10)
+    {
+        vector<Mat> size_train_img;
+        vector<Mat> size_test_img;
+        vector<Mat> size_neg_img;
+        Size img_size(size, size);
+        for (size_t i = 0; i < n; ++i)
+        {
+            Mat image;
+            dataset.GetClassifyImage(true, i, &image, img_size);
+            cv::cvtColor(image, image, CV_BGR2GRAY);
+            size_train_img.push_back(image);
+
+            // Augment using rotation
+            for (int j = 0; j < AUGMENT_TIMES; ++j)
+            {
+                Mat rot_img = image.clone();
+                RotateImage(rot_img, rotate_angle.at<float>(i, j));
+                size_train_img.push_back(rot_img);
+            }
+        }
+        for (size_t i = 0; i < test_n; ++i)
+        {
+            Mat image;
+            dataset.GetClassifyImage(false, i, &image, img_size);
+            cv::cvtColor(image, image, CV_BGR2GRAY);
+            size_test_img.push_back(image);
+        }
+        for (auto img: neg_images)
+        {
+            Mat new_img;
+            cv::resize(img, new_img, img_size);
+            size_neg_img.push_back(new_img);
+        }
+
+        for (int num_orient = 3; num_orient <= 10; ++num_orient)
+        {
+            hog_extractor_.set_num_orient(num_orient);
+            for (int cell_size = 4; cell_size <= 12; cell_size += 2)
+            {
+                printf("(%d %d %d), ", num_orient, cell_size, size);
+                fflush(stdout);
+
+                size_train_img.insert(size_train_img.end(),
+                        size_neg_img.begin(), size_neg_img.end());
+                neg_labels.resize(neg_images.size(), 0);
+                labels.insert(labels.end(), neg_labels.begin(),
+                        neg_labels.end());
+
+                Mat feats;
+                hog_extractor_.set_cell_size(cell_size);
+                hog_extractor_.Extract(size_train_img, &feats);
+                svm_classifier_.Train(feats, labels);
+                labels.erase(labels.begin() + labels.size()
+                        - neg_images.size(), labels.end());
+                feats.resize(labels.size());
+
+                Mat neg_feats;
+                MiningHardSample(dataset, neg_num, img_size, &neg_feats);
+                neg_labels.resize(neg_feats.rows, 0);
+                labels.insert(labels.end(), neg_labels.begin(),
+                        neg_labels.end());
+                feats.push_back(neg_feats);
+                svm_classifier_.Train(feats, labels);
+                labels.erase(labels.begin() + labels.size() - neg_feats.rows,
+                        labels.end());
+                feats.resize(labels.size());
+
+                vector<int> predict_labels;
+                svm_classifier_.Predict(feats, &predict_labels);
+                Mat result_row(1, 4, CV_32F);
+                EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+                        &result_row.at<float>(0, 0),
+                        &result_row.at<float>(0, 1));
+                hog_extractor_.Extract(size_test_img, &feats);
+                svm_classifier_.Predict(feats, &predict_labels);
+                EvaluateClassify(test_labels, predict_labels, CLASS_NUM, true,
+                        &result_row.at<float>(0, 2),
+                        &result_row.at<float>(0, 3));
+                hog_result.push_back(result_row);
+                SaveMat(dir + "/hog_result_para", hog_result);
+            }
+        }
+    }
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/hog_result_para", hog_result);
+    return true;
+}
+
 bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
         size_t neg_num, Size image_size, Mat *neg_feats)
 {

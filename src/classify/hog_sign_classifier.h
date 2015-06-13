@@ -18,7 +18,9 @@ namespace ghk
 class HogSignClassifier: public SignClassifier
 {
 public:
-    HogSignClassifier(float c = 125, int img_size = 100):
+    HogSignClassifier(int num_orient = 8, int cell_size = 8,
+            float c = 125, int img_size = 100):
+        hog_extractor_(num_orient, cell_size),
         svm_classifier_(c), img_size_(img_size) {}
 
     virtual bool Save(const string &model_name) const;
@@ -26,6 +28,8 @@ public:
 
     virtual bool Train(const Dataset &dataset);
     virtual bool Test(const Dataset &dataset);
+    virtual bool FullTest(const Dataset &dataset,
+            const string &dir);
     virtual bool Predict(const vector<Mat> &images,
             vector<int> *labels);
 

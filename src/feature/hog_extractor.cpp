@@ -15,9 +15,9 @@ extern "C"
 namespace ghk
 {
 HogExtractor::HogExtractor(int num_orient, int cell_size):
-    num_orient_(num_orient), cell_size_(cell_size)
+    hog_(nullptr), num_orient_(num_orient), cell_size_(cell_size)
 {
-    hog_ = vl_hog_new(VlHogVariantDalalTriggs, num_orient_, VL_FALSE);
+    Update();
 }
 
 HogExtractor::~HogExtractor()
@@ -54,11 +54,8 @@ bool HogExtractor::Load(const string &model_name)
     num_orient_ = param[0];
     cell_size_ = param[1];
 
-    if (hog_ != nullptr)
-    {
-        vl_hog_delete(hog_);
-    }
-    hog_ = vl_hog_new(VlHogVariantDalalTriggs, num_orient_, VL_FALSE);
+    Update();
+
     return true;
 }
 
@@ -100,5 +97,14 @@ bool HogExtractor::Extract(const vector<Mat> &images, Mat *feats)
         feats->push_back(feat_row);
     }
     return true;
+}
+
+void HogExtractor::Update()
+{
+    if (hog_ != nullptr)
+    {
+        vl_hog_delete(hog_);
+    }
+    hog_ = vl_hog_new(VlHogVariantDalalTriggs, num_orient_, VL_FALSE);
 }
 }  // namespace ghk

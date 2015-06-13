@@ -28,13 +28,22 @@ public:
                 const vector<int> &labels) { return false; }
     virtual bool Extract(const vector<Mat> &images, Mat *feats);
 
-    inline void set_num_orient(int num_orient) { num_orient_ = num_orient; }
+    inline void set_num_orient(int num_orient)
+    {
+        if (num_orient_ != num_orient)
+        {
+            num_orient_ = num_orient;
+            Update();
+        }
+    }
     inline void set_cell_size(int cell_size) { cell_size_ = cell_size; }
 
 private:
     VlHog *hog_;
     int num_orient_;
     int cell_size_;
+
+    void Update();
 };
 }  // namespace ghk
 
