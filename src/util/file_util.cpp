@@ -55,7 +55,8 @@ bool SaveMat(const string& file_name, const Mat& mat,
              const vector<float>& param)
 {
     FILE *out_file;
-    if ((out_file = fopen((file_name + FILE_EXT).c_str(), "w")) == nullptr)
+    string name = file_name;
+    if ((out_file = fopen((name + FILE_EXT).c_str(), "w")) == nullptr)
     {
         return false;
     }

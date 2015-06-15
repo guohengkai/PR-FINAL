@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     // TestDataset();
     // TestClassifier();
     // KnnSignClassifier classifier(true, 5, 180, 20, false);
-    HogSignClassifier classifier(8, 8, 125, 100);
+    HogSignClassifier classifier(4, 4, 100, 50);
     // TrainSignClassifier(&classifier, "hog_neg");
     FullTest(&classifier);
     return 0;

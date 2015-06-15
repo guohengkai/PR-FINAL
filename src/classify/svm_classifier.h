@@ -25,6 +25,8 @@ public:
     virtual bool Train(const Mat &feats, const vector<int> &labels);
     virtual bool Predict(const Mat &feats, vector<int> *labels) const;
 
+    inline void set_c(float c) { c_ = c; }
+
 private:
     svm_model *svm_model_;
     float c_;  // Penalty coefficient

@@ -238,7 +238,7 @@ bool HogSignClassifier::FullTest(const Dataset &dataset,
     vector<Mat> neg_images;
     auto neg_num = n / (CLASS_NUM - 1) * 2;
     printf("Randomly getting negative samples...\n");
-    if (!dataset.GetRandomNegImage(neg_num, Size(150, 150), &neg_images))
+    if (!dataset.GetRandomNegImage(neg_num, image_size, &neg_images))
     {
         printf("Fail to get negative samples.\n");
         return false;
@@ -349,6 +349,126 @@ bool HogSignClassifier::FullTest(const Dataset &dataset,
     }
     printf("Done! Saving...\n");
     SaveMat(dir + "/hog_result_para", hog_result);
+
+    // Test for different penalty coefficients for SVM
+    Mat svm_result_penal;
+    printf("Training for different penalty coefficients...\n");
+    images.insert(images.end(), neg_images.begin(), neg_images.end());
+    Mat ori_feats;
+    hog_extractor_.Extract(images, &ori_feats);
+    for (float c = 0.0001; c < 1000000; c *= 10)
+    {
+        printf("%f, ", c);
+        fflush(stdout);
+
+        Mat feats = ori_feats.clone();
+        svm_classifier_.set_c(c);
+        labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
+        svm_classifier_.Train(feats, labels);
+        labels.erase(labels.begin() + labels.size()
+                - neg_images.size(), labels.end());
+        feats.resize(labels.size());
+
+        Mat neg_feats;
+        MiningHardSample(dataset, neg_num, image_size, &neg_feats);
+        neg_labels.resize(neg_feats.rows, 0);
+        labels.insert(labels.end(), neg_labels.begin(),
+                neg_labels.end());
+        feats.push_back(neg_feats);
+        svm_classifier_.Train(feats, labels);
+        labels.erase(labels.begin() + labels.size() - neg_feats.rows,
+                labels.end());
+        feats.resize(labels.size());
+
+        vector<int> predict_labels;
+        Mat result_row(1, 4, CV_32F);
+        svm_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+                &result_row.at<float>(0, 0),
+                &result_row.at<float>(0, 1));
+        hog_extractor_.Extract(test_images, &feats);
+        svm_classifier_.Predict(feats, &predict_labels);
+        EvaluateClassify(test_labels, predict_labels, CLASS_NUM, true,
+                &result_row.at<float>(0, 2),
+                &result_row.at<float>(0, 3));
+        svm_result_penal.push_back(result_row);
+        SaveMat(dir + "/svm_result_penal", svm_result_penal);
+    }
+    printf("\n");
+    printf("Done! Saving...\n");
+    SaveMat(dir + "/svm_result_penal", svm_result_penal);
+
+    // Best results
+    Timer timer;
+    timer.Start();
+    printf("Training for best result for HOG SVM...\n");
+    images.insert(images.end(), neg_images.begin(), neg_images.end());
+    labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
+
+    Mat feats;
+    hog_extractor_.Extract(images, &feats);
+    svm_classifier_.Train(feats, labels);
+    labels.erase(labels.begin() + labels.size()
+            - neg_images.size(), labels.end());
+    feats.resize(labels.size());
+    float t1 = timer.Snapshot();
+    printf("Time for training without mining: %0.3fs\n", t1);
+    vector<int> predict_labels;
+    vector<float> best_result_before_train(2, 0);
+    vector<float> best_result_before_test(2, 0);
+    Mat mat_before_train, mat_before_test;
+    svm_classifier_.Predict(feats, &predict_labels);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &best_result_before_train[0],
+            &best_result_before_train[1],
+            &mat_before_train);
+    Mat test_feats;
+    hog_extractor_.Extract(test_images, &test_feats);
+    svm_classifier_.Predict(test_feats, &predict_labels);
+    EvaluateClassify(test_labels, predict_labels, CLASS_NUM, true,
+            &best_result_before_test[0],
+            &best_result_before_test[1],
+            &mat_before_test);
+    float t2 = timer.Snapshot();
+    printf("Time for testing without mining: %0.3fs\n", t2 - t1);
+
+    Mat neg_feats;
+    MiningHardSample(dataset, neg_num, image_size, &neg_feats);
+    neg_labels.resize(neg_feats.rows, 0);
+    labels.insert(labels.end(), neg_labels.begin(),
+            neg_labels.end());
+    feats.push_back(neg_feats);
+    svm_classifier_.Train(feats, labels);
+    labels.erase(labels.begin() + labels.size() - neg_feats.rows,
+            labels.end());
+    feats.resize(labels.size());
+    float t3 = timer.Snapshot();
+    printf("Time for training with mining: %0.3fs\n", t1 + (t3 - t2));
+
+    Mat mat_after_train, mat_after_test;
+    vector<float> best_result_after_train(2, 0);
+    vector<float> best_result_after_test(2, 0);
+    svm_classifier_.Predict(feats, &predict_labels);
+    EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
+            &best_result_after_train[0],
+            &best_result_after_train[1],
+            &mat_after_train);
+    hog_extractor_.Extract(test_images, &feats);
+    svm_classifier_.Predict(feats, &predict_labels);
+    EvaluateClassify(test_labels, predict_labels, CLASS_NUM, true,
+            &best_result_after_test[0],
+            &best_result_after_test[1],
+            &mat_after_test);
+    float t4 = timer.Snapshot();
+    printf("Time for testing with mining: %0.3fs\n", (t2 - t1) + (t4 - t3));
+    SaveMat(dir + "/best_hog_before_train",
+                mat_before_train, best_result_before_train);
+    SaveMat(dir + "/best_hog_before_test",
+                mat_before_test, best_result_before_test);
+    SaveMat(dir + "/best_hog_after_train",
+                mat_after_train, best_result_after_train);
+    SaveMat(dir + "/best_hog_after_test",
+                mat_after_test, best_result_after_test);
     return true;
 }
 

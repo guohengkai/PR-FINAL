@@ -314,6 +314,7 @@ bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
         test_labels.push_back(dataset.GetClassifyLabel(false, i));
     }
 
+    /*
     // Test of component number for eigen feature (best: 180)
     set_use_fisher(false);
     printf("Training for different component number with eigen...\n");
@@ -673,29 +674,70 @@ bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
             &neg_result_fisher.at<float>(0, 3));
     printf("Done! Saving...\n");
     SaveMat(dir + "/neg_result_fisher", neg_result_fisher);
+    */
 
+    Mat feats, neg_feats, test_feats;
+    vector<int> neg_train_labels, predict_labels, test_predict_labels;
+    vector<float> neg_distance;
+    float mean, deviation;
+    vector<float> train_dis;
+    vector<float> test_dis;
     // Best results for eigen feature
+    Timer timer;
+    timer.Start();
     printf("Training for best result with eigen...\n");
     set_use_fisher(false);
+    knn_classifier_.set_near_num(5);
     extractor_->Train(images, labels);
     extractor_->Extract(images, &feats);
     knn_classifier_.Train(feats, labels);
-    extractor_->Extract(test_images, &test_feats);
 
-    knn_classifier_.Predict(feats, &predict_labels);
+    extractor_->Extract(neg_images, &neg_feats);
+    knn_classifier_.Predict(neg_feats, &neg_train_labels, &neg_distance);
+    mean = 0;
+    deviation = 0;
+    for (auto dis: neg_distance)
+    {
+        mean += dis;
+        deviation += dis * dis;
+    }
+    mean /= neg_distance.size();
+    deviation = sqrt(deviation / neg_distance.size() - mean * mean);
+    threshold_ = mean + 2.5 * deviation;
+    float t1 = timer.Snapshot();
+    printf("Time for training PCA: %0.3fs\n", t1);
+
+    extractor_->Extract(test_images, &test_feats);
+    knn_classifier_.Predict(feats, &predict_labels, &train_dis);
+    for (size_t i = 0; i < train_dis.size(); ++i)
+    {
+        if (train_dis[i] > threshold_)
+        {
+            predict_labels[i] = 0;
+        }
+    }
     Mat result_mat_train_eigen;
     vector<float> best_result_train_eigen(2, 0);
     EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
             &best_result_train_eigen[0],
             &best_result_train_eigen[1],
             &result_mat_train_eigen);
-    knn_classifier_.Predict(test_feats, &test_predict_labels);
+    knn_classifier_.Predict(test_feats, &test_predict_labels, &test_dis);
+    for (size_t i = 0; i < test_dis.size(); ++i)
+    {
+        if (test_dis[i] > threshold_)
+        {
+            test_predict_labels[i] = 0;
+        }
+    }
     Mat result_mat_test_eigen;
     vector<float> best_result_test_eigen(2, 0);
     EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
             &best_result_test_eigen[0],
             &best_result_test_eigen[1],
             &result_mat_test_eigen);
+    float t2 = timer.Snapshot();
+    printf("Time for testing PCA: %0.3fs\n", t2 - t1);
     printf("Done! Saving...\n");
     SaveMat(dir + "/best_result_train_eigen",
             result_mat_train_eigen, best_result_train_eigen);
@@ -703,27 +745,60 @@ bool KnnSignClassifier::FullTest(const Dataset &dataset, const string &dir)
             result_mat_test_eigen, best_result_test_eigen);
     
     // Best results for fisher feature
+    t1 = timer.Snapshot();
     printf("Training for best result with fisher...\n");
     set_use_fisher(true);
+    knn_classifier_.set_near_num(7);
     extractor_->Train(images, labels);
     extractor_->Extract(images, &feats);
     knn_classifier_.Train(feats, labels);
     extractor_->Extract(test_images, &test_feats);
 
-    knn_classifier_.Predict(feats, &predict_labels);
+    extractor_->Extract(neg_images, &neg_feats);
+    knn_classifier_.Predict(neg_feats, &neg_train_labels, &neg_distance);
+    mean = 0;
+    deviation = 0;
+    for (auto dis: neg_distance)
+    {
+        mean += dis;
+        deviation += dis * dis;
+    }
+    mean /= neg_distance.size();
+    deviation = sqrt(deviation / neg_distance.size() - mean * mean);
+    threshold_ = mean + 2.5 * deviation;
+    t2 = timer.Snapshot();
+    printf("Time for training Fisher: %0.3fs\n", t2 - t1);
+
+    knn_classifier_.Predict(feats, &predict_labels, &train_dis);
+    for (size_t i = 0; i < train_dis.size(); ++i)
+    {
+        if (train_dis[i] > threshold_)
+        {
+            predict_labels[i] = 0;
+        }
+    }
     Mat result_mat_train_fisher;
     vector<float> best_result_train_fisher(2, 0);
     EvaluateClassify(labels, predict_labels, CLASS_NUM, true,
             &best_result_train_fisher[0],
             &best_result_train_fisher[1],
             &result_mat_train_fisher);
-    knn_classifier_.Predict(test_feats, &test_predict_labels);
+    knn_classifier_.Predict(test_feats, &test_predict_labels, &test_dis);
+    for (size_t i = 0; i < test_dis.size(); ++i)
+    {
+        if (test_dis[i] > threshold_)
+        {
+            test_predict_labels[i] = 0;
+        }
+    }
     Mat result_mat_test_fisher;
     vector<float> best_result_test_fisher(2, 0);
     EvaluateClassify(test_labels, test_predict_labels, CLASS_NUM, true,
             &best_result_test_fisher[0],
             &best_result_test_fisher[1],
             &result_mat_test_fisher);
+    t1 = timer.Snapshot();
+    printf("Time for testing Fisher: %0.3fs\n", t1 - t2);
     printf("Done! Saving...\n");
     SaveMat(dir + "/best_result_train_fisher",
             result_mat_train_fisher, best_result_train_fisher);
