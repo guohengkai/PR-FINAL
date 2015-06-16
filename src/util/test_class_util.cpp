@@ -100,10 +100,6 @@ void TestClassifier(Classifier *classifier, const string &tmp_dir)
 
 void TestDataset(Dataset &dataset)
 {
-    Mat image = cv::imread("/home/ghk/Src/PR-HW/PR-FINAL/data/1/0002.jpg");
-    cv::imshow("", image);
-    cv::waitKey();
-
     const size_t idx = 72;
     Mat test_image;
     vector<Rect> rects;
@@ -113,6 +109,7 @@ void TestDataset(Dataset &dataset)
     dataset.GetDetectLabels(idx, &labels);
     dataset.GetDetectRects(idx, &rects);
 
+    /*
     dataset.DrawRectAndLabel(rects, labels, &test_image);
 
     cv::imshow("", test_image);
@@ -128,10 +125,25 @@ void TestDataset(Dataset &dataset)
 
     vector<Mat> neg_images;
     dataset.GetRandomNegImage(100, Size(100, 100), &neg_images, false);
+
     int n = 0;
     for (auto image: neg_images)
     {
         ++n;
+        stringstream ss;
+        ss << n;
+        cv::imwrite("/home/ghk/Src/PR-HW/PR-FINAL/data/self-neg/"
+                + ss.str() + ".jpg", image);
+    }*/
+
+    vector<Mat> images;
+    dataset.GetDetectPosImage(Size(50, 50), &images, &labels, true);
+    cout << "Load " << images.size() <<  " images for detection." << endl;
+    int n = 0;
+    for (auto image: images)
+    {
+        ++n;
+        if (n > 100) break;
         stringstream ss;
         ss << n;
         cv::imwrite("/home/ghk/Src/PR-HW/PR-FINAL/data/self-neg/"

@@ -15,9 +15,11 @@ namespace ghk
 {
 const int CLASS_NUM = 11;  // 0 for open-set test
 const int POS_C_TEST_NUM = 40;  // number of test images for each class
-const vector<int> SIZE_LIST = vector<int>{30, 50, 80, 100, 150};  // box size
-const int AUGMENT_TIMES = 2;
-const int AUGMENT_ROTATE = 15;  // Max rotation degree
+const size_t DETECT_TEST_NUM = 500;  // number of test images for detection
+const vector<int> SIZE_LIST = vector<int>{
+    20, 30, 50, 70, 90, 100, 150, 200, 250, 300};  // box size
+const int AUGMENT_TIMES = 4;
+const int AUGMENT_ROTATE = 30;  // Max rotation degree
 
 const string FILE_LIST_NAME = "filelist.txt";
 const string DETECT_ANNOTE_NAME = "annotations.txt";
@@ -29,6 +31,8 @@ const string NEG_DIR = "/neg";
 const int MAX_LINE = 255;
 const int DETECT_NAME_LENGTH = 25;  // length of image name for detection
 const float INTERSECT_UNION_RATE = 0.5;
+const float INTERSECT_UNION_RATE_POS = 0.7;
+const int DETECT_STEP = 10;
 
 class Dataset
 {
@@ -42,10 +46,16 @@ public:
     bool GetDetectLabels(size_t idx, vector<int> *labels) const;
     bool GetDetectRects(size_t idx, vector<Rect> *rects) const;
     bool GetFullImage(size_t idx, Mat *image) const;
+    bool GetDetectLabels(bool is_train, size_t idx, vector<int> *labels) const;
+    bool GetDetectRects(bool is_train, size_t idx, vector<Rect> *rects) const;
+    bool GetDetectImage(bool is_train, size_t idx, Mat *image) const;
 
     bool GetRandomNegImage(size_t neg_num, Size image_size,
             vector<Mat> *images, bool is_augment = true) const;
+    bool GetDetectPosImage(Size image_size, vector<Mat> *images,
+            vector<int> *labels, bool is_augment = true) const;
     bool IsNegativeImage(size_t idx, const Rect &rect) const;
+    int IsPositiveImage(size_t idx, const Rect &rect) const;
 
     void DrawRectAndLabel(const vector<Rect> &rects, const vector<int> &labels,
             Mat *image) const;
@@ -57,6 +67,10 @@ public:
     inline size_t GetFullImageNum() const
     {
         return d_rect_.size();
+    }
+    inline size_t GetDetectNum(bool is_train) const
+    {
+        return is_train ? d_rect_.size() - DETECT_TEST_NUM : DETECT_TEST_NUM;
     }
 
 private:

@@ -49,11 +49,11 @@ void FullTest(SignClassifier *classifier)
 
 int main(int argc, char **argv)
 {
-    // TestDataset();
+    TestDataset();
     // TestClassifier();
     // KnnSignClassifier classifier(true, 5, 180, 20, false);
-    HogSignClassifier classifier(4, 4, 100, 50);
+    // HogSignClassifier classifier(4, 4, 100, 50);
     // TrainSignClassifier(&classifier, "hog_neg");
-    FullTest(&classifier);
+    // FullTest(&classifier);
     return 0;
 }

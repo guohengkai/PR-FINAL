@@ -128,6 +128,42 @@ bool Dataset::GetFullImage(size_t idx, Mat *image) const
     return true;
 }
 
+bool Dataset::GetDetectLabels(bool is_train, size_t idx, vector<int> *labels) const
+{
+    if (is_train)
+    {
+        return GetDetectLabels(idx, labels);
+    }
+    else
+    {
+        return GetDetectLabels(idx + GetDetectNum(true), labels);
+    }
+}
+
+bool Dataset::GetDetectRects(bool is_train, size_t idx, vector<Rect> *rects) const
+{
+    if (is_train)
+    {
+        return GetDetectRects(idx, rects);
+    }
+    else
+    {
+        return GetDetectRects(idx + GetDetectNum(true), rects);
+    }
+}
+
+bool Dataset::GetDetectImage(bool is_train, size_t idx, Mat *image) const
+{
+    if (is_train)
+    {
+        return GetFullImage(idx, image);
+    }
+    else
+    {
+        return GetFullImage(idx + GetDetectNum(true), image);
+    }
+}
+
 bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
         vector<Mat> *images, bool is_augment) const
 {
@@ -188,6 +224,66 @@ bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
     }
 }
 
+bool Dataset::GetDetectPosImage(Size image_size,
+        vector<Mat> *images, vector<int> *labels, bool is_augment) const
+{
+    if (images == nullptr)
+    {
+        return false;
+    }
+
+    images->clear();
+    labels->clear();
+    for (size_t i = 0; i < GetDetectNum(true); ++i)
+    {
+        if (i % 100 == 0)
+        {
+            printf("%zu(%zu), ", i, images->size());
+            fflush(stdout);
+        }
+        Mat image;
+        GetDetectImage(true, i, &image);
+
+        for (auto size: SIZE_LIST)
+        {
+            for (int x = 0; x < image.cols; x += DETECT_STEP)
+                for (int y = 0; y < image.rows; y += DETECT_STEP)
+                {
+                    if (x + size >= image.cols || y + size >= image.rows)
+                    {
+                        continue;
+                    }
+                    Rect rect(x, y, size, size);
+                    int label;
+                    if ((label = IsPositiveImage(i, rect)) > 0)
+                    {
+                        Mat temp = image(rect).clone();
+                        Mat resize_temp;
+                        cv::resize(temp, resize_temp, image_size);
+                        cv::cvtColor(resize_temp, resize_temp, CV_BGR2GRAY);
+                        images->push_back(resize_temp);
+                        labels->push_back(label);
+                        if (is_augment)
+                        {
+                            for (int i = 0; i < AUGMENT_TIMES; ++i)
+                            {
+                                Mat rot_img = temp.clone();
+                                RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
+                                        - AUGMENT_ROTATE);
+                                cv::resize(rot_img, rot_img, image_size);
+                                cv::cvtColor(rot_img, rot_img, CV_BGR2GRAY);
+                                images->push_back(rot_img);
+                                labels->push_back(label);
+                            }
+                        }
+                    }
+                }
+        }
+    }
+    printf("\n");
+    return true;
+}
+
 bool Dataset::IsNegativeImage(size_t idx, const Rect &rect) const
 {
     for (auto pos: d_rect_[idx])
@@ -199,6 +295,20 @@ bool Dataset::IsNegativeImage(size_t idx, const Rect &rect) const
         }
     }
     return true;
+}
+
+int Dataset::IsPositiveImage(size_t idx, const Rect &rect) const
+{
+    for (size_t i = 0; i < d_rect_[idx].size(); ++i)
+    {
+        auto pos = d_rect_[idx][i];
+        if (static_cast<float>((pos & rect).area()) / (pos | rect).area()
+                >= INTERSECT_UNION_RATE_POS)
+        {
+            return d_label_[idx][i];
+        }
+    }
+    return 0;
 }
 
 bool Dataset::LoadLabelNames(const string &list_name)
