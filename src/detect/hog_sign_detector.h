@@ -17,9 +17,9 @@ namespace ghk
 class HogSignDetector: public SignDetector
 {
 public:
-    HogSignClassifier(int num_orient = 8, int cell_size = 8,
+    HogSignDetector(int num_orient = 8, int cell_size = 8,
             float c = 125, int img_size = 100):
-        classifier_(num_orient, cell_size, c, image_size),
+        classifier_(num_orient, cell_size, c, img_size),
         image_size_(Size(img_size, img_size)) {}
     virtual bool Save(const string &model_name) const;
     virtual bool Load(const string &model_name);
@@ -32,7 +32,7 @@ public:
 private:
     HogSignClassifier classifier_;
     Size image_size_;
-}
+};
 }  // namespace ghk
 
 #endif  // FINAL_HOG_SIGN_DETECTOR_H_

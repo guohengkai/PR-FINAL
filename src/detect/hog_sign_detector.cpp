@@ -26,10 +26,10 @@ bool HogSignDetector::Train(const Dataset &dataset)
     vector<Mat> images;
     vector<int> labels;
     printf("Preparing postive training data...\n");
-    dataset.GetDetectPosImage(image_size, &images, &labels, true);
+    dataset.GetDetectPosImage(image_size_, &images, &labels, true);
     
     // Train the classifier
-    if (!Train(dataset, images, labels))
+    if (!classifier_.Train(dataset, images, labels))
     {
         return false;
     }
@@ -39,12 +39,12 @@ bool HogSignDetector::Train(const Dataset &dataset)
 
 bool HogSignDetector::Test(const Dataset &dataset)
 {
-
+    return false;
 }
 
 bool HogSignDetector::Detect(const vector<Mat> &images,
         vector<vector<Rect>> *rects, vector<int> *labels)
 {
-
+    return false;
 }
 }  // namespace ghk
