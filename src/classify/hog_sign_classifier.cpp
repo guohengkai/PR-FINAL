@@ -49,37 +49,14 @@ bool HogSignClassifier::Load(const string &model_name)
     return true;
 }
 
-bool HogSignClassifier::Train(const Dataset &dataset)
+bool HogSignClassifier::Train(const Dataset &dataset,
+        vector<Mat> &images, vector<int> &labels)
 {
-    // Get training data
-    vector<Mat> images;
-    vector<int> labels;
-    size_t n = dataset.GetClassifyNum(true);
-    Size img_size(img_size_, img_size_);
-    printf("Preparing training data...\n");
-    for (size_t i = 0; i < n; ++i)
-    {
-        Mat image;
-        dataset.GetClassifyImage(true, i, &image, img_size);
-        cv::cvtColor(image, image, CV_BGR2GRAY);
-        images.push_back(image);
-        labels.push_back(dataset.GetClassifyLabel(true, i));
-
-        // Augment using rotation
-        for (int j = 0; j < AUGMENT_TIMES; ++j)
-        {
-            Mat rot_img = image.clone();
-            RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
-                    - AUGMENT_ROTATE);
-            images.push_back(rot_img);
-            labels.push_back(labels[labels.size() - 1]);
-        }
-    }
-
     // Find random negative sample
     srand(time(NULL));
     vector<Mat> neg_images;
-    auto neg_num = n / (CLASS_NUM - 1) * 2;
+    Size img_size(img_size_, img_size_);
+    auto neg_num = static_cast<int>(images.size() * 1.5);
     printf("Randomly getting negative samples...\n");
     if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images))
     {
@@ -114,9 +91,6 @@ bool HogSignClassifier::Train(const Dataset &dataset)
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
     printf("Test on training rate before mining: %0.2f%%\n", rate * 100);
 
-    // Test on testing dataset
-    Test(dataset);
-
     // Mining hard negative sample
     timer.Start();
     printf("Mining hard negative samples...\n");
@@ -145,6 +119,41 @@ bool HogSignClassifier::Train(const Dataset &dataset)
     svm_classifier_.Predict(feats, &predict_labels);
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
     printf("Test on training rate after mining: %0.2f%%\n", rate * 100);
+
+    return true;
+}
+
+bool HogSignClassifier::Train(const Dataset &dataset)
+{
+    // Get training data
+    vector<Mat> images;
+    vector<int> labels;
+    size_t n = dataset.GetClassifyNum(true);
+    Size img_size(img_size_, img_size_);
+    printf("Preparing training data...\n");
+    for (size_t i = 0; i < n; ++i)
+    {
+        Mat image;
+        dataset.GetClassifyImage(true, i, &image, img_size);
+        cv::cvtColor(image, image, CV_BGR2GRAY);
+        images.push_back(image);
+        labels.push_back(dataset.GetClassifyLabel(true, i));
+
+        // Augment using rotation
+        for (int j = 0; j < AUGMENT_TIMES; ++j)
+        {
+            Mat rot_img = image.clone();
+            RotateImage(rot_img, Random(AUGMENT_ROTATE * 2 + 1)
+                    - AUGMENT_ROTATE);
+            images.push_back(rot_img);
+            labels.push_back(labels[labels.size() - 1]);
+        }
+    }
+    
+    if (!Train(dataset, images, labels))
+    {
+        return false;
+    }
 
     return true;
 }
@@ -481,7 +490,7 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
     }
 
     vector<size_t> image_idxs;
-    for (size_t i = 0; i < dataset.GetFullImageNum(); ++i)
+    for (size_t i = 0; i < dataset.GetDetectNum(true); ++i)
     {
         image_idxs.push_back(i);
     }
@@ -489,11 +498,10 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
 
     neg_feats->resize(0);
     const int step = 10;
-    neg_num *= (AUGMENT_TIMES + 1);
     for (auto idx: image_idxs)
     {
         Mat full_image;
-        if (!dataset.GetFullImage(idx, &full_image))
+        if (!dataset.GetDetectImage(true, idx, &full_image))
         {
             continue;
         }
@@ -509,7 +517,7 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
                     }
 
                     Rect rect(x, y, size, size);
-                    if (dataset.IsNegativeImage(idx, rect))
+                    if (dataset.IsNegativeImage(true, idx, rect))
                     {
                         Mat image = full_image(rect).clone();
                         cv::resize(image, image, image_size);

@@ -54,8 +54,8 @@ public:
             vector<Mat> *images, bool is_augment = true) const;
     bool GetDetectPosImage(Size image_size, vector<Mat> *images,
             vector<int> *labels, bool is_augment = true) const;
-    bool IsNegativeImage(size_t idx, const Rect &rect) const;
-    int IsPositiveImage(size_t idx, const Rect &rect) const;
+    bool IsNegativeImage(bool is_train, size_t idx, const Rect &rect) const;
+    int IsPositiveImage(bool is_train, size_t idx, const Rect &rect) const;
 
     void DrawRectAndLabel(const vector<Rect> &rects, const vector<int> &labels,
             Mat *image) const;
@@ -77,6 +77,10 @@ private:
     bool LoadLabelNames(const string &list_name);
     bool LoadClassifyImages(const string &data_dir, int label, int test_num);
     bool LoadDetectLists(const string &data_dir);
+    inline size_t GetDetectIdx(bool is_train, size_t idx) const
+    {
+        return is_train ? idx : idx + GetDetectNum(true);
+    }
 
     string base_dir_;
 

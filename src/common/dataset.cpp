@@ -130,38 +130,17 @@ bool Dataset::GetFullImage(size_t idx, Mat *image) const
 
 bool Dataset::GetDetectLabels(bool is_train, size_t idx, vector<int> *labels) const
 {
-    if (is_train)
-    {
-        return GetDetectLabels(idx, labels);
-    }
-    else
-    {
-        return GetDetectLabels(idx + GetDetectNum(true), labels);
-    }
+    return GetDetectLabels(GetDetectIdx(is_train, idx), labels);
 }
 
 bool Dataset::GetDetectRects(bool is_train, size_t idx, vector<Rect> *rects) const
 {
-    if (is_train)
-    {
-        return GetDetectRects(idx, rects);
-    }
-    else
-    {
-        return GetDetectRects(idx + GetDetectNum(true), rects);
-    }
+    return GetDetectRects(GetDetectIdx(is_train, idx), rects);
 }
 
 bool Dataset::GetDetectImage(bool is_train, size_t idx, Mat *image) const
 {
-    if (is_train)
-    {
-        return GetFullImage(idx, image);
-    }
-    else
-    {
-        return GetFullImage(idx + GetDetectNum(true), image);
-    }
+    return GetFullImage(GetDetectIdx(is_train, idx), image);
 }
 
 bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
@@ -181,9 +160,9 @@ bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
     images->clear();
     while (images->size() < neg_num && iter <= max_iter)
     {
-        auto idx = Random(GetFullImageNum());
+        auto idx = Random(GetDetectNum(true));
         Mat image;
-        GetFullImage(idx, &image);
+        GetDetectImage(true, idx, &image);
 
         auto size_idx = Random(SIZE_LIST.size());
         auto size = SIZE_LIST[size_idx];
@@ -191,7 +170,7 @@ bool Dataset::GetRandomNegImage(size_t neg_num, Size image_size,
         auto pos_y = Random(image.rows - size + 1);
         
         Rect rect(pos_x, pos_y, size, size);
-        if (IsNegativeImage(idx, rect))
+        if (IsNegativeImage(true, idx, rect))
         {
             image = image(rect);
             cv::resize(image, image, image_size);
@@ -255,7 +234,7 @@ bool Dataset::GetDetectPosImage(Size image_size,
                     }
                     Rect rect(x, y, size, size);
                     int label;
-                    if ((label = IsPositiveImage(i, rect)) > 0)
+                    if ((label = IsPositiveImage(true, i, rect)) > 0)
                     {
                         Mat temp = image(rect).clone();
                         Mat resize_temp;
@@ -284,8 +263,9 @@ bool Dataset::GetDetectPosImage(Size image_size,
     return true;
 }
 
-bool Dataset::IsNegativeImage(size_t idx, const Rect &rect) const
+bool Dataset::IsNegativeImage(bool is_train, size_t idx, const Rect &rect) const
 {
+    idx = GetDetectIdx(is_train, idx);
     for (auto pos: d_rect_[idx])
     {
         if (static_cast<float>((pos & rect).area()) / (pos | rect).area()
@@ -297,8 +277,9 @@ bool Dataset::IsNegativeImage(size_t idx, const Rect &rect) const
     return true;
 }
 
-int Dataset::IsPositiveImage(size_t idx, const Rect &rect) const
+int Dataset::IsPositiveImage(bool is_train, size_t idx, const Rect &rect) const
 {
+    idx = GetDetectIdx(is_train, idx);
     for (size_t i = 0; i < d_rect_[idx].size(); ++i)
     {
         auto pos = d_rect_[idx][i];

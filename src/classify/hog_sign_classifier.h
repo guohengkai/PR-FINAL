@@ -27,6 +27,8 @@ public:
     virtual bool Load(const string &model_name);
 
     virtual bool Train(const Dataset &dataset);
+    bool Train(const Dataset &dataset, vector<Mat> &images,
+            vector<int> &labels);
     virtual bool Test(const Dataset &dataset);
     virtual bool FullTest(const Dataset &dataset,
             const string &dir);
