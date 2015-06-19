@@ -39,7 +39,42 @@ bool HogSignDetector::Train(const Dataset &dataset)
 
 bool HogSignDetector::Test(const Dataset &dataset)
 {
-    return false;
+    vector<vector<Rect>> rects, rects_truth;
+    vector<vector<int>> labels, labels_truth;
+    size_t n = dataset.GetDetectNum(false);
+    
+    for (size_t i = 0; i < n; ++i)
+    {
+        // Get ground truth
+        vector<Rect> res_rects;
+        vector<int> res_labels;
+        if (!dataset.GetDetectRects(false, i, &res_rects))
+        {
+            return false;
+        }
+        if (!dataset.GetDetectLabels(false, i, &res_labels))
+        {
+            return false;
+        }
+        rects_truth.push_back(res_rects);
+        labels_truth.push_back(res_labels);
+
+        // Get image
+        Mat image;
+        if (!dataset.GetDetectImage(false, i, &image))
+        {
+            return false;
+        }
+        cv::cvtColor(image, image, CV_BGR2GRAY);
+
+        // Get detection result
+        DetectSingle(image, &res_rects, &res_labels);
+        rects.push_back(res_rects);
+        labels.push_back(res_labels);
+    }
+
+    EvaluateDetect(rects_truth, labels_truth, rects, labels);
+    return true;
 }
 
 bool HogSignDetector::Detect(const vector<Mat> &images,
@@ -54,7 +89,7 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
     labels->clear();
     for (auto image: images)
     {
-
+        
     }
 
     return true;
