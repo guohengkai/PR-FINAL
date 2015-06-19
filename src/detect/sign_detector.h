@@ -21,10 +21,11 @@ public:
     virtual bool Train(const Dataset &dataset) = 0;
     virtual bool Test(const Dataset &dataset) { return false; }
     virtual bool Detect(const vector<Mat> &images,
-            vector<vector<Rect>> *rects, vector<int> *labels) = 0;
+            vector<vector<Rect>> *rects, vector<vector<int>> *labels) = 0;
     virtual bool FullTest(const Dataset &dataset,
             const string &dir) { return false; }
-    int Detect(const Mat &image, vector<Rect> *rects);
+    bool DetectSingle(const Mat &image,
+            vector<Rect> *rects, vector<int> *labels);
 };
 }  // namespace ghk
 

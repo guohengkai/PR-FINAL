@@ -8,7 +8,7 @@
 
 namespace ghk
 {
-int SignClassifier::Predict(const Mat &image)
+int SignClassifier::PredictSingle(const Mat &image)
 {
     vector<Mat> image_vec(1, image);
     vector<int> labels;

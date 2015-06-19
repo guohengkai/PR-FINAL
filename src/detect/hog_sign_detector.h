@@ -27,7 +27,7 @@ public:
     virtual bool Train(const Dataset &dataset);
     virtual bool Test(const Dataset &dataset);
     virtual bool Detect(const vector<Mat> &images,
-            vector<vector<Rect>> *rects, vector<int> *labels);
+            vector<vector<Rect>> *rects, vector<vector<int>> *labels);
 
 private:
     HogSignClassifier classifier_;

@@ -8,16 +8,18 @@
 
 namespace ghk
 {
-int SignDetector::Detect(const Mat &image, vector<Rect> *rects)
+bool SignDetector::DetectSingle(const Mat &image,
+        vector<Rect> *rects, vector<int> *labels)
 {
     vector<Mat> image_vec(1, image);
-    vector<int> labels;
+    vector<vector<int>> labels_vec;
     vector<vector<Rect>> rects_vec;
-    if (!Detect(image_vec, &rects_vec, &labels))
+    if (!Detect(image_vec, &rects_vec, &labels_vec))
     {
-        return -1;
+        return false;
     }
     *rects = rects_vec[0];
-    return labels[0];
+    *labels = labels[0];
+    return true;
 }
 }  // namespace ghk

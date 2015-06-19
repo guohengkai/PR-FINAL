@@ -43,8 +43,20 @@ bool HogSignDetector::Test(const Dataset &dataset)
 }
 
 bool HogSignDetector::Detect(const vector<Mat> &images,
-        vector<vector<Rect>> *rects, vector<int> *labels)
+        vector<vector<Rect>> *rects, vector<vector<int>> *labels)
 {
-    return false;
+    if (rects == nullptr || labels == nullptr)
+    {
+        return false;
+    }
+
+    rects->clear();
+    labels->clear();
+    for (auto image: images)
+    {
+
+    }
+
+    return true;
 }
 }  // namespace ghk

@@ -24,7 +24,7 @@ public:
             vector<int> *labels) = 0;
     virtual bool FullTest(const Dataset &dataset,
             const string &dir) { return false; }
-    int Predict(const Mat &image);
+    int PredictSingle(const Mat &image);
 };
 }  // namespace ghk
 
