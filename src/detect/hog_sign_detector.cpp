@@ -73,7 +73,7 @@ bool HogSignDetector::Test(const Dataset &dataset)
         labels.push_back(res_labels);
     }
 
-    EvaluateDetect(rects_truth, labels_truth, rects, labels);
+    // EvaluateDetect(rects_truth, labels_truth, rects, labels);
     return true;
 }
 

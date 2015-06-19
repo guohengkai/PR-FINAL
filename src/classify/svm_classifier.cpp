@@ -105,6 +105,13 @@ bool SvmClassifier::Train(const Mat &feats, const vector<int> &labels)
 
 bool SvmClassifier::Predict(const Mat &feats, vector<int> *labels) const
 {
+    vector<float> probs;
+    return Predict(feats, labels, &probs);
+}
+
+bool SvmClassifier::Predict(const Mat &feats, vector<int> *labels,
+        vector<float> *probs) const
+{
     if (labels == nullptr)
     {
         return false;
@@ -113,6 +120,10 @@ bool SvmClassifier::Predict(const Mat &feats, vector<int> *labels) const
     int m = feats.cols;
     int n = feats.rows;
     labels->clear();
+    if (probs != nullptr)
+    {
+        probs->clear();
+    }
 
     // Normalize the features
     Mat feats_norm;
@@ -129,7 +140,28 @@ bool SvmClassifier::Predict(const Mat &feats, vector<int> *labels) const
         }
         x[m].index = -1;
 
-        labels->push_back(svm_predict(svm_model_, x));
+        if (probs == nullptr)
+        {
+            labels->push_back(svm_predict(svm_model_, x));
+        }
+        else
+        {
+            double *prob = static_cast<double*>(
+                    malloc(svm_model_->nr_class * sizeof(double)));
+            int label = svm_predict_probability(svm_model_, x, prob);
+            labels->push_back(label);
+            int idx = 0;
+            for (int k = 0; k < svm_model_->nr_class; ++k)
+            {
+                if (label == svm_model_->label[k])
+                {
+                    idx = k;
+                    break;
+                }
+            }
+            probs->push_back(prob[idx]);
+            delete prob;
+        }
     }
     free(x);
 
@@ -155,7 +187,7 @@ void SvmClassifier::PrepareParameter(int feat_dim, svm_parameter *param) const
     param->eps = 1e-3;
     param->p = 0.1;
     param->shrinking = 1;
-    param->probability = 0;
+    param->probability = 1;
     param->nr_weight = 0;
     param->weight_label = NULL;
     param->weight = NULL;
