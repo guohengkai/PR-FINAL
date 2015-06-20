@@ -34,6 +34,8 @@ public:
             const string &dir);
     virtual bool Predict(const vector<Mat> &images,
             vector<int> *labels);
+    bool Predict(const vector<Mat> &images,
+            vector<int> *labels, vector<float> *probs);
 
 private:
     HogExtractor hog_extractor_;

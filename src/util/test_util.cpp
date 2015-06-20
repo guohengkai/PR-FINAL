@@ -5,6 +5,7 @@
     > Created Time: Sat 16 May 2015 04:48:16 PM CST
  ************************************************************************/
 #include "test_util.h"
+#include "file_util.h"
 
 namespace ghk
 {
@@ -56,5 +57,82 @@ void EvaluateClassify(const vector<int> &ground_truth,
     {
         *result_mat = Mat(result.mul(cv::repeat(class_sum, 1, class_num)));
     }
+}
+
+struct Result
+{
+    bool res;
+    float score;
+};
+
+bool ResultComp(const Result &lhs, const Result &rhs)
+{
+    return lhs.score < rhs.score;
+}
+
+float UpdateThreshold(const vector<bool> &results, const vector<float> &scores,
+        const string &file_name, int pos_num, float *th, float fppw)
+{
+    vector<Result> res_vec;
+    float pos = 0;
+    float neg = 0;
+    for (size_t i = 0; i < results.size(); ++i)
+    {
+        res_vec.push_back(Result{results[i], scores[i]});
+        if (results[i])
+        {
+            ++pos;
+        }
+        else
+        {
+            ++neg;
+        }
+    }
+
+    // Sort the score from high to low
+    sort(res_vec.begin(), res_vec.end(), ResultComp);
+
+    // Calculate all the rates with different threshold
+    Mat rate;
+    float accuracy;
+    int total = static_cast<int>(results.size());
+    for (size_t i = 0; i <= res_vec.size(); ++i)
+    {
+        Mat rate_row = Mat::zeros(1, 2, CV_32F);
+        rate_row.at<float>(0, 0) = 1 - pos / pos_num;
+        float temp = neg / total;
+        rate_row.at<float>(0, 1) = temp;
+        rate.push_back(rate_row);
+
+        if (i == res_vec.size())
+        {
+            break;
+        }
+
+        if (temp <= fppw)
+        {
+            accuracy = 1 - rate_row.at<float>(0, 0);
+            *th = res_vec[i].score - 1e-5;
+            if (file_name.empty())
+            {
+                return accuracy;
+            }
+        }
+
+        if (res_vec[i].res)
+        {
+            --pos;
+        }
+        else
+        {
+            --neg;
+        }
+    }
+
+    if (!file_name.empty())
+    {
+        SaveMat(file_name, rate);
+    }
+    return accuracy;
 }
 }  // namespace ghk

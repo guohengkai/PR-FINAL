@@ -27,6 +27,9 @@ public:
     bool DetectSingle(const Mat &image,
             vector<Rect> *rects, vector<int> *labels);
 };
+
+void MergeRects(const vector<Rect> &rects, const vector<int> &labels,
+        const vector<float> &probs, vector<size_t> *idx);
 }  // namespace ghk
 
 #endif  // FINAL_SIGN_DETECTOR_H_

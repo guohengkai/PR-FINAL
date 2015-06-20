@@ -22,4 +22,53 @@ bool SignDetector::DetectSingle(const Mat &image,
     *labels = labels[0];
     return true;
 }
+
+struct DetectedRect
+{
+    float prob;
+    size_t idx;
+};
+
+bool DetectedRectComp(const DetectedRect &lhs, const DetectedRect &rhs)
+{
+    return lhs.prob > rhs.prob;
+}
+
+void MergeRects(const vector<Rect> &rects, const vector<int> &labels,
+        const vector<float> &probs, vector<size_t> *idx)
+{
+    if (idx == nullptr)
+    {
+        return;
+    }
+
+    vector<DetectedRect> results;
+    for (size_t i = 0; i < rects.size(); ++i)
+    {
+        results.push_back(DetectedRect{probs[i], i});
+    }
+    sort(results.begin(), results.end(), DetectedRectComp);
+
+    idx->clear();
+    for (auto result: results)
+    {
+        bool flag = true;
+        size_t j = result.idx;
+        for (auto i: *idx)
+        {
+            if (labels[i] == labels[j] && static_cast<float>(
+                        (rects[i] & rects[j]).area())
+                     / ((rects[i] | rects[j]).area()) >= 0.5)
+            {
+                flag = false;
+                break;
+            }
+        }
+
+        if (flag)
+        {
+            idx->push_back(j);
+        }
+    }
+}
 }  // namespace ghk

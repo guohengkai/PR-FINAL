@@ -28,10 +28,13 @@ public:
     virtual bool Test(const Dataset &dataset);
     virtual bool Detect(const vector<Mat> &images,
             vector<vector<Rect>> *rects, vector<vector<int>> *labels);
+    bool Detect(const vector<Mat> &images, vector<vector<Rect>> *rects,
+            vector<vector<int>> *labels, vector<vector<float>> *probs);
 
 private:
     HogSignClassifier classifier_;
     Size image_size_;
+    float th_;
 };
 }  // namespace ghk
 

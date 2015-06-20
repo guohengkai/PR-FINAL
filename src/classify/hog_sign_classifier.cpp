@@ -188,6 +188,13 @@ bool HogSignClassifier::Test(const Dataset &dataset)
 bool HogSignClassifier::Predict(const vector<Mat> &images,
         vector<int> *labels)
 {
+    vector<float> probs;
+    return Predict(images, labels, &probs);
+}
+
+bool HogSignClassifier::Predict(const vector<Mat> &images,
+        vector<int> *labels, vector<float> *probs)
+{
     if (labels == nullptr)
     {
         return false;
@@ -204,7 +211,7 @@ bool HogSignClassifier::Predict(const vector<Mat> &images,
 
     // Prediction
     printf("Predicting with SVM...\n");
-    svm_classifier_.Predict(feats, labels);
+    svm_classifier_.Predict(feats, labels, probs);
     float t2 = timer.Snapshot();
     printf("Time for classification: %0.3fs\n", t2 - t1);
     printf("Prediction done! Total time for %d images: %0.3fs\n",
