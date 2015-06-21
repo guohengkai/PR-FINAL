@@ -71,7 +71,7 @@ bool ResultComp(const Result &lhs, const Result &rhs)
 }
 
 float UpdateThreshold(const vector<bool> &results, const vector<float> &scores,
-        const string &file_name, int pos_num, float *th, float fppw)
+        const string &file_name, int pos_num, int win_num, float *th, float fppw)
 {
     vector<Result> res_vec;
     float pos = 0;
@@ -94,25 +94,36 @@ float UpdateThreshold(const vector<bool> &results, const vector<float> &scores,
 
     // Calculate all the rates with different threshold
     Mat rate;
-    float accuracy;
-    int total = static_cast<int>(results.size());
+    float accuracy = -1;
+    bool is_set = false;
     for (size_t i = 0; i <= res_vec.size(); ++i)
     {
         Mat rate_row = Mat::zeros(1, 2, CV_32F);
         rate_row.at<float>(0, 0) = 1 - pos / pos_num;
-        float temp = neg / total;
+        float temp = neg / win_num;
         rate_row.at<float>(0, 1) = temp;
-        rate.push_back(rate_row);
+        bool flag = true;
+
+        if (i == 0 || i == res_vec.size()
+                || fabs(res_vec[i].score - res_vec[i - 1].score) > 1e-5)
+        {
+            rate.push_back(rate_row);
+        }
+        else
+        {
+            flag = false;
+        }
 
         if (i == res_vec.size())
         {
             break;
         }
 
-        if (temp <= fppw)
+        if (!is_set && temp <= fppw && flag)
         {
             accuracy = 1 - rate_row.at<float>(0, 0);
             *th = res_vec[i].score - 1e-5;
+            is_set = true;
             if (file_name.empty())
             {
                 return accuracy;
@@ -132,6 +143,12 @@ float UpdateThreshold(const vector<bool> &results, const vector<float> &scores,
     if (!file_name.empty())
     {
         SaveMat(file_name, rate);
+    }
+
+    if (!is_set)
+    {
+        accuracy = 1 - rate.at<float>(rate.rows - 1, 0);
+        *th = res_vec.back().score + 1e-5;
     }
     return accuracy;
 }

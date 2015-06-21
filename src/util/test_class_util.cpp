@@ -7,6 +7,7 @@
 #include "test_class_util.h"
 #include "file_util.h"
 #include "mat_util.h"
+#include "sign_detector.h"
 #include "test_util.h"
 
 namespace ghk
@@ -109,7 +110,6 @@ void TestDataset(Dataset &dataset)
     dataset.GetDetectLabels(idx, &labels);
     dataset.GetDetectRects(idx, &rects);
 
-    /*
     dataset.DrawRectAndLabel(rects, labels, &test_image);
 
     cv::imshow("", test_image);
@@ -134,12 +134,12 @@ void TestDataset(Dataset &dataset)
         ss << n;
         cv::imwrite("/home/ghk/Src/PR-HW/PR-FINAL/data/self-neg/"
                 + ss.str() + ".jpg", image);
-    }*/
+    }
 
     vector<Mat> images;
     dataset.GetDetectPosImage(Size(50, 50), &images, &labels, true);
     cout << "Load " << images.size() <<  " images for detection." << endl;
-    int n = 0;
+    n = 0;
     for (auto image: images)
     {
         ++n;
@@ -148,6 +148,40 @@ void TestDataset(Dataset &dataset)
         ss << n;
         cv::imwrite("/home/ghk/Src/PR-HW/PR-FINAL/data/self-neg/"
                 + ss.str() + ".jpg", image);
+    }
+}
+
+void TestDetectorFunc()
+{
+    cout << "Test UpdateThreshold function..." << endl;
+    vector<bool> results{
+        true, false, true, false, true, false, false, false, true, false
+    };
+    vector<float> scores{
+        0.5f, 0.6f, 0.7f, 0.5f, 0.1f, 0.2f, 1.0f, 0.2f, 1.0f, 0.3f
+    };
+
+    float th;
+    cout << UpdateThreshold(results, scores, "./result/test_func",
+            5, 100, &th, 0.01f) << endl;
+    cout << th << endl;
+
+    cout << "Test MergeRects function..." << endl;
+    vector<Rect> rects{
+        Rect(0, 0, 2, 2), Rect(0, 0, 2, 3), Rect(1, 1, 2, 2), Rect(0, 0, 3, 3),
+        Rect(0, 0, 2, 2)
+    };
+    vector<int> labels{
+        0, 0, 0, 0, 1
+    };
+    vector<float> probs{
+        0.8f, 0.7f, 0.9f, 0.6f, 1.0f
+    };
+    vector<size_t> idx;
+    MergeRects(rects, labels, probs, &idx);
+    for (auto i: idx)
+    {
+        cout << rects[i] << " " << labels[i] << " " << probs[i] << endl;
     }
 }
 }  // namespace ghk

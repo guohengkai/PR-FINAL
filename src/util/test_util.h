@@ -17,6 +17,7 @@ void EvaluateClassify(const vector<int> &ground_truth,
                       float *tpr, float *fpr, Mat *result_mat = nullptr);
 // Return the threshold and accuracy under FPPW
 float UpdateThreshold(const vector<bool> &results, const vector<float> &scores,
-        const string &file_name, int pos_num, float *th, float fppw = 1e-4);
+        const string &file_name, int pos_num, int win_num,
+        float *th, float fppw = 1e-4);
 }  // namespace ghk
 #endif  // FINAL_TEST_UTIL_H_

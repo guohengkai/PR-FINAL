@@ -16,6 +16,7 @@ namespace ghk
 void Generate2dRandomData(int train_cnt, int test_cnt, Mat *data);
 void TestClassifier(Classifier *classifier, const string &tmp_dir);
 void TestDataset(Dataset &dataset);
+void TestDetectorFunc();
 }  // namespace ghk
 
 #endif  // FINAL_TEST_CLASS_UTIL_

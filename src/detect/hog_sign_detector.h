@@ -29,7 +29,8 @@ public:
     virtual bool Detect(const vector<Mat> &images,
             vector<vector<Rect>> *rects, vector<vector<int>> *labels);
     bool Detect(const vector<Mat> &images, vector<vector<Rect>> *rects,
-            vector<vector<int>> *labels, vector<vector<float>> *probs);
+            vector<vector<int>> *labels, vector<vector<float>> *probs,
+            int *win_num = nullptr);
 
 private:
     HogSignClassifier classifier_;

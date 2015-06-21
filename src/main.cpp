@@ -12,6 +12,7 @@
 #include "sign_classifier.h"
 #include "knn_sign_classifier.h"
 #include "hog_sign_classifier.h"
+#include "hog_sign_detector.h"
 
 using namespace ghk;
 
@@ -47,13 +48,43 @@ void FullTest(SignClassifier *classifier)
     classifier->FullTest(dataset, root_dir + result_dir);
 }
 
+void TrainDetector(const string &model_name)
+{
+    Dataset dataset(root_dir);
+    HogSignDetector detector(4, 4, 100, 50);
+    detector.Train(dataset);
+    detector.Save(root_dir + model_dir + '/' + model_name);
+    /*
+    detector.Load(root_dir + model_dir + '/' + model_name);
+    vector<Mat> image(1);
+    size_t idx = 100;
+    vector<int> labels;
+    vector<Rect> rects;
+    dataset.GetDetectImage(false, idx, &image[0]);
+    dataset.GetDetectRects(false, idx, &rects);
+    dataset.GetDetectLabels(false, idx, &labels);
+
+    vector<vector<Rect>> res_rects;
+    vector<vector<int>> res_labels;
+    vector<vector<float>> probs;
+    int win_num;
+    detector.Detect(image, &res_rects, &res_labels, &probs, &win_num);
+    cout << "Total number of windows: " << win_num << endl;
+    dataset.DrawRectAndLabel(res_rects[0], res_labels[0], &image[0]);
+    cv::imshow("", image[0]);
+    cv::waitKey();*/
+}
+
 int main(int argc, char **argv)
 {
-    TestDataset();
+    // TestDataset();
     // TestClassifier();
     // KnnSignClassifier classifier(true, 5, 180, 20, false);
     // HogSignClassifier classifier(4, 4, 100, 50);
     // TrainSignClassifier(&classifier, "hog_neg");
     // FullTest(&classifier);
+
+    TrainDetector("hog_detector");
+    // TestDetectorFunc();
     return 0;
 }
