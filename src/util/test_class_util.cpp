@@ -169,17 +169,23 @@ void TestDetectorFunc()
     cout << "Test MergeRects function..." << endl;
     vector<Rect> rects{
         Rect(0, 0, 2, 2), Rect(0, 0, 2, 3), Rect(1, 1, 2, 2), Rect(0, 0, 3, 3),
+        Rect(0, 0, 2, 2), Rect(0, 0, 2, 3), Rect(1, 1, 2, 2), Rect(0, 0, 3, 3),
+        Rect(0, 0, 2, 2), Rect(0, 0, 2, 3), Rect(1, 1, 2, 2), Rect(0, 0, 3, 3),
+        Rect(0, 0, 2, 2), Rect(0, 0, 2, 3), Rect(1, 1, 2, 2), Rect(0, 0, 3, 3),
         Rect(0, 0, 2, 2)
     };
     vector<int> labels{
-        0, 0, 0, 0, 1
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1
     };
     vector<float> probs{
-        0.8f, 0.7f, 0.9f, 0.6f, 1.0f
+        0.8f, 0.7f, 0.9f, 0.6f, 1.0f,
+        0.8f, 0.7f, 0.9f, 0.6f,
+        0.8f, 0.7f, 0.9f, 0.6f,
+        0.8f, 0.7f, 0.9f, 1.0f
     };
     vector<size_t> idx;
-    MergeRects(rects, labels, probs, &idx);
-    for (auto i: idx)
+    MergeRects(rects, labels, probs, 0.667f);
+    for (size_t i = 0; i < rects.size(); ++i)
     {
         cout << rects[i] << " " << labels[i] << " " << probs[i] << endl;
     }

@@ -385,6 +385,8 @@ bool Dataset::LoadDetectLists(const string &data_dir)
     char image_name[DETECT_NAME_LENGTH + 1];
     char line[MAX_LINE + 1];
     int ch;
+
+    int max_size = 0, min_size = 10000;
     while (1)
     {
         // Read image name
@@ -422,16 +424,24 @@ bool Dataset::LoadDetectLists(const string &data_dir)
                 int a, b, c, d;
                 sscanf(token_ptr, "%[^,],%d,%d,%d,%d", label_name,
                         &a, &b, &c, &d);
+                if (c - a < SIZE_LIST[0] || d - b < SIZE_LIST[0])
+                {
+                    continue;
+                }
                 // printf("%s\n", label_name);
                 // printf("%d %d %d %d\n", a, b, c, d);
                 rects.push_back(Rect(a, b, c - a, d - b));
+                max_size = std::max(max_size, d - b);
+                max_size = std::max(max_size, c - a);
+                min_size = std::min(min_size, d - b);
+                min_size = std::min(min_size, c - a);
                 labels.push_back(label_name_map_[string(label_name)]);
             }
         }
         d_rect_.push_back(rects);
         d_label_.push_back(labels);
     }
-
+    printf("Max/min size: %d, %d\n", max_size, min_size);
     fclose(in_file);
     return true;
 }

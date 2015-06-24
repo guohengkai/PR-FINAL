@@ -26,6 +26,8 @@ using cv::Size;
 
 using std::size_t;
 using std::map;
+using std::max;
+using std::min;
 using std::set;
 using std::sort;
 using std::string;

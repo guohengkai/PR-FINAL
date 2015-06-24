@@ -56,9 +56,9 @@ bool HogSignClassifier::Train(const Dataset &dataset,
     srand(time(NULL));
     vector<Mat> neg_images;
     Size img_size(img_size_, img_size_);
-    auto neg_num = static_cast<int>(images.size() * 1.5);
+    auto neg_num = static_cast<int>(images.size() / (CLASS_NUM - 1) * 2);
     printf("Randomly getting negative samples...\n");
-    if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images))
+    if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images, false))
     {
         printf("Fail to get negative samples.\n");
         return false;
@@ -90,6 +90,7 @@ bool HogSignClassifier::Train(const Dataset &dataset,
     float rate, fp;
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
     printf("Test on training rate before mining: %0.2f%%\n", rate * 100);
+    /*
 
     // Mining hard negative sample
     timer.Start();
@@ -118,7 +119,7 @@ bool HogSignClassifier::Train(const Dataset &dataset,
     // Test on training again
     svm_classifier_.Predict(feats, &predict_labels);
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
-    printf("Test on training rate after mining: %0.2f%%\n", rate * 100);
+    printf("Test on training rate after mining: %0.2f%%\n", rate * 100);*/
 
     return true;
 }
@@ -200,22 +201,22 @@ bool HogSignClassifier::Predict(const vector<Mat> &images,
         return false;
     }
 
-    Timer timer;
+    // Timer timer;
     // Feature extraction
     Mat feats;
-    printf("Extracting features...\n");
-    timer.Start();
+    // printf("Extracting features...\n");
+    // timer.Start();
     hog_extractor_.Extract(images, &feats);
-    float t1 = timer.Snapshot();
-    printf("Time for extration: %0.3fs\n", t1);
+    // float t1 = timer.Snapshot();
+    // printf("Time for extration: %0.3fs\n", t1);
 
     // Prediction
-    printf("Predicting with SVM...\n");
+    // printf("Predicting with SVM...\n");
     svm_classifier_.Predict(feats, labels, probs);
-    float t2 = timer.Snapshot();
-    printf("Time for classification: %0.3fs\n", t2 - t1);
-    printf("Prediction done! Total time for %d images: %0.3fs\n",
-            feats.rows, t2);
+    // float t2 = timer.Snapshot();
+    // printf("Time for classification: %0.3fs\n", t2 - t1);
+    // printf("Prediction done! Total time for %d images: %0.3fs\n",
+    //        feats.rows, t2);
 
     return true;
 }
@@ -529,7 +530,8 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
                         Mat image = full_image(rect).clone();
                         cv::resize(image, image, image_size);
                         cv::cvtColor(image, image, CV_BGR2GRAY);
-                        
+                       
+                        /*
                         vector<Mat> image_vec(AUGMENT_TIMES + 1, image);
                         for (int i = 0; i < AUGMENT_TIMES; ++i)
                         {
@@ -537,6 +539,8 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
                                     Random(AUGMENT_ROTATE * 2 + 1)
                                     - AUGMENT_ROTATE);
                         }
+                        */
+                        vector<Mat> image_vec(1, image);
 
                         Mat feat_row;
                         if (!hog_extractor_.Extract(image_vec, &feat_row))
@@ -551,6 +555,7 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
                             return false;
                         }
 
+                        /*
                         for (size_t i = 0; i < labels.size(); ++i)
                         {
                             if (labels[i] != 0)
@@ -560,6 +565,14 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
                                 {
                                     return true;
                                 }
+                            }
+                        }*/
+                        if (labels[0] != 0)
+                        {
+                            neg_feats->push_back(feat_row);
+                            if (neg_feats->rows >= static_cast<int>(neg_num))
+                            {
+                                return true;
                             }
                         }
                     }

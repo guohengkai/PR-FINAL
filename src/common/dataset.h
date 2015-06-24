@@ -17,7 +17,7 @@ const int CLASS_NUM = 11;  // 0 for open-set test
 const int POS_C_TEST_NUM = 40;  // number of test images for each class
 const size_t DETECT_TEST_NUM = 500;  // number of test images for detection
 const vector<int> SIZE_LIST = vector<int>{
-    20, 30, 50, 70, 90, 100, 150, 200, 250, 300};  // box size
+    20, 30, 50, 100, 150, 200};  // box size
 const int AUGMENT_TIMES = 4;
 const int AUGMENT_ROTATE = 30;  // Max rotation degree
 

@@ -178,6 +178,7 @@ void SvmClassifier::PrepareParameter(int feat_dim, svm_parameter *param) const
     // default values
     param->svm_type = C_SVC;
     param->kernel_type = RBF;
+    // param->kernel_type = LINEAR;
     param->degree = 3;
     param->gamma = 1.0 / feat_dim;
     param->coef0 = 0;

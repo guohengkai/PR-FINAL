@@ -28,8 +28,8 @@ public:
             vector<Rect> *rects, vector<int> *labels);
 };
 
-void MergeRects(const vector<Rect> &rects, const vector<int> &labels,
-        const vector<float> &probs, vector<size_t> *idx);
+void MergeRects(vector<Rect> &rects, vector<int> &labels,
+        vector<float> &probs, float hit_rate);
 }  // namespace ghk
 
 #endif  // FINAL_SIGN_DETECTOR_H_

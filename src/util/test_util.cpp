@@ -55,7 +55,7 @@ void EvaluateClassify(const vector<int> &ground_truth,
 
     if (result_mat != nullptr)
     {
-        *result_mat = Mat(result.mul(cv::repeat(class_sum, 1, class_num)));
+        *result_mat = Mat(result.mul(cv::repeat(1.0f / class_sum, 1, class_num)));
     }
 }
 

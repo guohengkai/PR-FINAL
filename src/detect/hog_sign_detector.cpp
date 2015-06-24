@@ -6,6 +6,7 @@
  ************************************************************************/
 #include "hog_sign_detector.h"
 #include "dataset.h"
+#include "file_util.h"
 #include "sign_detector.h"
 #include "test_util.h"
 
@@ -28,6 +29,13 @@ bool HogSignDetector::Train(const Dataset &dataset)
     vector<int> labels;
     printf("Preparing postive training data...\n");
     dataset.GetDetectPosImage(image_size_, &images, &labels, true);
+
+    for (size_t i = 0; i < images.size(); ++i)
+    {
+        stringstream ss;
+        ss << labels[i] << "/" << i;
+        cv::imwrite("/home/ghk/Src/PR-HW/PR-FINAL/data/detect/" + ss.str() + ".jpg", images[i]);
+    }
     
     // Train the classifier
     if (!classifier_.Train(dataset, images, labels))
@@ -133,10 +141,62 @@ bool HogSignDetector::Test(const Dataset &dataset)
 
         results.insert(results.end(), temp_res.begin(), temp_res.end());
     }
-    
+
+    // Find the threshold for SVM
     float rate = UpdateThreshold(results, scores,
             "./result/dect_curve.txt", pos_num, win_num, &th_);
     printf("Accuray under 10^-4 FPPW: %0.2f%%\n", rate * 100);
+
+    // Calculate confuse matrix
+    Mat confuse_mat = Mat::zeros(CLASS_NUM, CLASS_NUM, CV_32F);
+    Mat class_sum = Mat::zeros(CLASS_NUM, 1, CV_32F);
+    for (size_t i = 0; i < n; ++i)
+    {
+        vector<bool> temp_res(labels[i].size(), false);
+
+        for (size_t k = 0; k < labels_truth[i].size(); ++k)
+        {
+            Rect rect = rects_truth[i][k];
+            size_t idx = 0;
+            float max_p = -1;
+            for (size_t j = 0; j < labels[i].size(); ++j)
+            {
+                if (labels[i][j] == labels_truth[i][k] && static_cast<float>(
+                    (rect & rects[i][j]).area())
+                 / ((rect | rects[i][j]).area()) >= 0.5 &&
+                 probs[i][j] > max_p && !temp_res[j])
+                {
+                    max_p = probs[i][j];
+                    idx = j;
+                }
+            }
+            if (max_p >= 0)
+            {
+                temp_res[idx] = true;
+            }
+            else
+            {
+                ++confuse_mat.at<float>(labels_truth[i][k], 0);
+            }
+            ++class_sum.at<float>(labels_truth[i][k], 0);
+        }
+
+        for (size_t j = 0; j < labels[i].size(); ++j)
+        {
+            if (temp_res[j])
+            {
+                ++confuse_mat.at<float>(labels[i][j], labels[i][j]);
+            }
+            else
+            {
+                ++confuse_mat.at<float>(0, labels[i][j]);
+                ++class_sum.at<float>(0, 0);
+            }
+        }
+    }
+    confuse_mat = confuse_mat.mul(cv::repeat(1.0f / class_sum, 1, CLASS_NUM));
+    SaveMat("./result/det_hog_detect", confuse_mat);
+    
     return true;
 }
 
@@ -155,7 +215,7 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
     {
         return false;
     }
-
+    th_ = 0.95;
     rects->clear();
     labels->clear();
     probs->clear();
@@ -165,9 +225,11 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
     }
     for (auto image: images)
     {
-        vector<Rect> res_rects;
-        vector<int> res_labels;
-        vector<float> res_probs;
+        cout << "Searching image patches..." << endl;
+        Mat gray;
+        cvtColor(image, gray, CV_BGR2GRAY);
+        vector<Mat> image_vec;
+        vector<Rect> all_rects;
         for (auto size: SIZE_LIST)
         {
             for (int x = 0; x < image.cols; x += DETECT_STEP)
@@ -178,45 +240,49 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
                         continue;
                     }
 
-                    if (win_num != nullptr)
-                    {
-                        ++(*win_num);
-                    }
-
                     Rect rect(x, y, size, size);
-                    vector<Mat> image_vec(1, image(rect));
-                    vector<int> label_vec;
-                    vector<float> prob_vec;
-                    if (!classifier_.Predict(image_vec, &label_vec, &prob_vec))
-                    {
-                        return false;
-                    }
-                    if (label_vec[0] > 0)  // Positive response
-                    {
-                        res_rects.push_back(rect);
-                        res_labels.push_back(label_vec[0]);
-                        res_probs.push_back(prob_vec[0]);
-                    }
+                    Mat image_patch(gray(rect).clone());
+                    resize(image_patch, image_patch, image_size_);
+                    all_rects.push_back(rect);
+                    image_vec.push_back(image_patch);
                 }
         }
 
-        // Merge detect results
-        vector<size_t> idx;
-        MergeRects(res_rects, res_labels, res_probs, &idx);
-
-        vector<Rect> new_rects;
-        vector<int> new_labels;
-        vector<float> new_probs;
-        for (auto k: idx)
+        if (win_num != nullptr)
         {
-            new_rects.push_back(res_rects[k]);
-            new_labels.push_back(res_labels[k]);
-            new_probs.push_back(res_probs[k]);
+            *win_num += static_cast<int>(all_rects.size());
         }
 
-        rects->push_back(new_rects);
-        labels->push_back(new_labels);
-        probs->push_back(new_probs);
+        cout << "Predicting using SVM..." << endl;
+        vector<int> label_vec;
+        vector<float> prob_vec;
+        if (!classifier_.Predict(image_vec, &label_vec, &prob_vec))
+        {
+            return false;
+        }
+
+        vector<Rect> res_rects;
+        vector<int> res_labels;
+        vector<float> res_probs;
+        for (size_t i = 0; i < all_rects.size(); ++i)
+        {
+            if (label_vec[i] > 0 && prob_vec[i] > th_)  // Positive response
+            {
+                res_rects.push_back(all_rects[i]);
+                res_labels.push_back(label_vec[i]);
+                res_probs.push_back(prob_vec[i]);
+            }
+        }
+        cout << "Totally " << res_rects.size() << " positions detected." << endl;
+
+        // Merge detect results
+        vector<size_t> idx;
+        MergeRects(res_rects, res_labels, res_probs, 0.667f);
+        cout << "Totally " << res_rects.size() << " positions after merging." << endl;
+
+        rects->push_back(res_rects);
+        labels->push_back(res_labels);
+        probs->push_back(res_probs);
     }
 
     return true;
