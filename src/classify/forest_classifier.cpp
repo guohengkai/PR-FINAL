@@ -26,6 +26,11 @@ bool ForestClassifier::Train(const Mat &feats, const vector<int> &labels)
     Mat var_type = Mat::ones(feats.cols + 1, 1, CV_8U) * CV_VAR_NUMERICAL;
     var_type.at<uchar>(feats.cols, 0) = CV_VAR_CATEGORICAL;
 
+    max_class_ = 0;
+    for (auto label: labels)
+    {
+        max_class_ = max(max_class_, label);
+    }
     Mat label_mat;
     Vec2Mat(labels, &label_mat);
 
@@ -36,6 +41,9 @@ bool ForestClassifier::Train(const Mat &feats, const vector<int> &labels)
 
 bool ForestClassifier::Predict(const Mat &feats, vector<int> *labels) const
 {
+    vector<float> p;
+    return Predict(feats, labels, &p);
+    /*
     if (labels == nullptr)
     {
         return false;
@@ -47,12 +55,37 @@ bool ForestClassifier::Predict(const Mat &feats, vector<int> *labels) const
         int label = forest_.predict(feats.row(i));
         labels->push_back(label);
     }
-    return true;
+    return true;*/
 }
 
 bool ForestClassifier::Predict(const Mat &feats, vector<int> *labels,
         vector<float> *probs) const
 {
-    return false;
+    if (labels == nullptr || probs == nullptr)
+    {
+        return false;
+    }
+
+    labels->clear();
+    probs->clear();
+    int n = forest_.get_tree_count();
+    for (int i = 0; i < feats.rows; ++i)
+    {
+        Mat count = Mat::zeros(1, max_class_ + 1, CV_32F);
+        for (int j = 0; j < n; ++j)
+        {
+            auto tree = forest_.get_tree(j);
+            int res = tree->predict(feats.row(i))->value;
+            ++count.at<float>(0, res);
+        }
+        count /= n;
+        
+        double prob = 0;
+        int idx[2];
+        cv::minMaxIdx(count, nullptr, &prob, nullptr, idx);
+        labels->push_back(idx[1]);
+        probs->push_back(prob);
+    }
+    return true;
 }
 }  // namespace ghk

@@ -30,6 +30,7 @@ public:
 private:
     CvRTParams param_;
     CvRTrees forest_;
+    int max_class_;
 };
 }  // namespace ghk
 
