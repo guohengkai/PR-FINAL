@@ -24,7 +24,7 @@ public:
 
     virtual bool Train(const Mat &feats, const vector<int> &labels);
     virtual bool Predict(const Mat &feats, vector<int> *labels) const;
-    bool Predict(const Mat &feats, vector<int> *labels,
+    virtual bool Predict(const Mat &feats, vector<int> *labels,
             vector<float> *probs) const;
 
     inline void set_c(float c) { c_ = c; }

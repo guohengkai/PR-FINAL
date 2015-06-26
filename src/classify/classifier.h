@@ -19,6 +19,8 @@ public:
 
     virtual bool Train(const Mat &feats, const vector<int> &labels) = 0;
     virtual bool Predict(const Mat &feats, vector<int> *labels) const = 0;
+    virtual bool Predict(const Mat &feats, vector<int> *labels,
+            vector<float> *probs) const { return false; }
     int PredictSample(const Mat &feat) const;
 };
 }  // namespace ghk

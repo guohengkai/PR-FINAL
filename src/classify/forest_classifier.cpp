@@ -18,6 +18,7 @@ bool ForestClassifier::Save(const string &model_name) const
 bool ForestClassifier::Load(const string &model_name)
 {
     forest_.load((model_name + ".yml").c_str());
+    max_class_ = 10;
     return true;
 }
 
@@ -41,9 +42,6 @@ bool ForestClassifier::Train(const Mat &feats, const vector<int> &labels)
 
 bool ForestClassifier::Predict(const Mat &feats, vector<int> *labels) const
 {
-    vector<float> p;
-    return Predict(feats, labels, &p);
-    /*
     if (labels == nullptr)
     {
         return false;
@@ -55,7 +53,7 @@ bool ForestClassifier::Predict(const Mat &feats, vector<int> *labels) const
         int label = forest_.predict(feats.row(i));
         labels->push_back(label);
     }
-    return true;*/
+    return true;
 }
 
 bool ForestClassifier::Predict(const Mat &feats, vector<int> *labels,

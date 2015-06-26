@@ -30,12 +30,14 @@ bool HogSignDetector::Train(const Dataset &dataset)
     printf("Preparing postive training data...\n");
     dataset.GetDetectPosImage(image_size_, &images, &labels, true);
 
+    /*
     for (size_t i = 0; i < images.size(); ++i)
     {
         stringstream ss;
         ss << labels[i] << "/" << i;
         cv::imwrite("/home/ghk/Src/PR-HW/PR-FINAL/data/detect/" + ss.str() + ".jpg", images[i]);
     }
+    */
     
     // Train the classifier
     if (!classifier_.Train(dataset, images, labels))
@@ -51,6 +53,7 @@ bool HogSignDetector::Train(const Dataset &dataset)
 
 bool HogSignDetector::Test(const Dataset &dataset)
 {
+    string suffix = "_rf_with";
     vector<vector<Rect>> rects, rects_truth;
     vector<vector<int>> labels, labels_truth;
     vector<vector<float>> probs;
@@ -62,7 +65,7 @@ bool HogSignDetector::Test(const Dataset &dataset)
     {
         if (i % 100 == 0)
         {
-            printf("%zu, ", i);
+            printf("%zu, \n", i);
             fflush(stdout);
         }
         // Get ground truth
@@ -86,7 +89,6 @@ bool HogSignDetector::Test(const Dataset &dataset)
         {
             return false;
         }
-        cv::cvtColor(image, image, CV_BGR2GRAY);
 
         // Get detection result
         vector<Mat> image_vec(1, image);
@@ -144,7 +146,7 @@ bool HogSignDetector::Test(const Dataset &dataset)
 
     // Find the threshold for SVM
     float rate = UpdateThreshold(results, scores,
-            "./result/dect_curve.txt", pos_num, win_num, &th_);
+            "./result/dect_curve" + suffix + ".txt", pos_num, win_num, &th_);
     printf("Accuray under 10^-4 FPPW: %0.2f%%\n", rate * 100);
 
     // Calculate confuse matrix
@@ -195,7 +197,7 @@ bool HogSignDetector::Test(const Dataset &dataset)
         }
     }
     confuse_mat = confuse_mat.mul(cv::repeat(1.0f / class_sum, 1, CLASS_NUM));
-    SaveMat("./result/det_hog_detect", confuse_mat);
+    SaveMat("./result/det_detect" + suffix, confuse_mat);
     
     return true;
 }
@@ -215,7 +217,7 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
     {
         return false;
     }
-    th_ = 0.95;
+    // th_ = 0.95;
     rects->clear();
     labels->clear();
     probs->clear();
@@ -276,7 +278,6 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
         cout << "Totally " << res_rects.size() << " positions detected." << endl;
 
         // Merge detect results
-        vector<size_t> idx;
         MergeRects(res_rects, res_labels, res_probs, 0.667f);
         cout << "Totally " << res_rects.size() << " positions after merging." << endl;
 

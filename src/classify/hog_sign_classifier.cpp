@@ -1,7 +1,7 @@
 /*************************************************************************
     > File Name: hog_sign_classifier.cpp
     > Author: Guo Hengkai
-    > Description: HOG sign classifier class implementation using SVM
+    > Description: HOG sign classifier class implementation
     > Created Time: Mon 25 May 2015 03:37:00 PM CST
  ************************************************************************/
 #include "hog_sign_classifier.h"
@@ -24,10 +24,22 @@ bool HogSignClassifier::Save(const string &model_name) const
         printf("Fail to save the parameter.\n");
         return false;
     }
-    if (!svm_classifier_.Save(model_name + "_svm"))
+
+    if (use_svm_)
     {
-        printf("Fail to save SVM.\n");
-        return false;
+        if (!svm_classifier_.Save(model_name + "_svm"))
+        {
+            printf("Fail to save SVM.\n");
+            return false;
+        }
+    }
+    else
+    {
+        if (!forest_classifier_.Save(model_name + "_f"))
+        {
+            printf("Fail to save forest.\n");
+            return false;
+        }
     }
     return true;
 }
@@ -41,10 +53,21 @@ bool HogSignClassifier::Load(const string &model_name)
         printf("Fail to load the parameter.\n");
         return false;
     }
-    if (!svm_classifier_.Load(model_name + "_svm"))
+    if (use_svm_)
     {
-        printf("Fail to load SVM.\n");
-        return false;
+        if (!svm_classifier_.Load(model_name + "_svm"))
+        {
+            printf("Fail to load SVM.\n");
+            return false;
+        }
+    }
+    else
+    {
+        if (!forest_classifier_.Load(model_name + "_f"))
+        {
+            printf("Fail to load forest.\n");
+            return false;
+        }
     }
     return true;
 }
@@ -56,7 +79,7 @@ bool HogSignClassifier::Train(const Dataset &dataset,
     srand(time(NULL));
     vector<Mat> neg_images;
     Size img_size(img_size_, img_size_);
-    auto neg_num = static_cast<int>(images.size() / (CLASS_NUM - 1) * 2);
+    auto neg_num = static_cast<int>(images.size() / (CLASS_NUM - 1) * 5);
     printf("Randomly getting negative samples...\n");
     if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images, false))
     {
@@ -76,21 +99,20 @@ bool HogSignClassifier::Train(const Dataset &dataset,
     float t1 = timer.Snapshot();
     printf("Time for extraction: %0.3fs\n", t1);
 
-    // Train the SVM classifier
-    printf("Training SVM classifier...\n");
-    svm_classifier_.Train(feats, labels);
+    // Train the classifier
+    printf("Training classifier...\n");
+    classifier_->Train(feats, labels);
     float t2 = timer.Snapshot();
     printf("Time for training SVM: %0.3fs\n", t2 - t1);
-    labels.erase(labels.begin() + labels.size() - neg_images.size(), labels.end());
-    feats.resize(labels.size());
+    // labels.erase(labels.begin() + labels.size() - neg_images.size(), labels.end());
+    // feats.resize(labels.size());
 
     // Test on training before mining
     vector<int> predict_labels;
-    svm_classifier_.Predict(feats, &predict_labels);
+    classifier_->Predict(feats, &predict_labels);
     float rate, fp;
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
     printf("Test on training rate before mining: %0.2f%%\n", rate * 100);
-    /*
 
     // Mining hard negative sample
     timer.Start();
@@ -107,19 +129,19 @@ bool HogSignClassifier::Train(const Dataset &dataset,
     labels.insert(labels.end(), neg_labels.begin(), neg_labels.end());
     feats.push_back(neg_feats);
 
-    // Retrain SVM classifier
-    printf("Retraining SVM classifier...\n");
-    svm_classifier_.Train(feats, labels);
+    // Retrain the classifier
+    printf("Retraining classifier...\n");
+    classifier_->Train(feats, labels);
     float t4 = timer.Snapshot();
-    printf("Time for retrain SVM: %0.3fs\n", t4 - t3);
+    printf("Time for retrain: %0.3fs\n", t4 - t3);
     labels.erase(labels.begin() + labels.size() - neg_feats.rows, labels.end());
     feats.resize(labels.size());
     printf("Total time: %0.3fs\n", t4 + t2);
 
     // Test on training again
-    svm_classifier_.Predict(feats, &predict_labels);
+    classifier_->Predict(feats, &predict_labels);
     EvaluateClassify(labels, predict_labels, CLASS_NUM, false, &rate, &fp);
-    printf("Test on training rate after mining: %0.2f%%\n", rate * 100);*/
+    printf("Test on training rate after mining: %0.2f%%\n", rate * 100);
 
     return true;
 }
@@ -204,15 +226,16 @@ bool HogSignClassifier::Predict(const vector<Mat> &images,
     // Timer timer;
     // Feature extraction
     Mat feats;
-    // printf("Extracting features...\n");
+    printf("Extracting features...\n");
     // timer.Start();
     hog_extractor_.Extract(images, &feats);
+    cout << feats.size() << endl;
     // float t1 = timer.Snapshot();
     // printf("Time for extration: %0.3fs\n", t1);
 
     // Prediction
-    // printf("Predicting with SVM...\n");
-    svm_classifier_.Predict(feats, labels, probs);
+    printf("Predicting with classifier...\n");
+    classifier_->Predict(feats, labels, probs);
     // float t2 = timer.Snapshot();
     // printf("Time for classification: %0.3fs\n", t2 - t1);
     // printf("Prediction done! Total time for %d images: %0.3fs\n",
@@ -514,8 +537,8 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
             continue;
         }
         
-        for (int x = 0; x < full_image.cols; x += step)
-            for (int y = 0; y < full_image.rows; y += step)
+        for (int x = 0; x < full_image.cols; x += step * 2)
+            for (int y = 0; y < full_image.rows; y += step * 2)
                 for (size_t size_idx = 0; size_idx < SIZE_LIST.size(); ++size_idx)
                 {
                     int size = SIZE_LIST[size_idx];
@@ -550,7 +573,8 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
 
                         // False positive
                         vector<int> labels;
-                        if (!svm_classifier_.Predict(feat_row, &labels))
+                        vector<float> probs;
+                        if (!classifier_->Predict(feat_row, &labels, &probs))
                         {
                             return false;
                         }
@@ -567,7 +591,7 @@ bool HogSignClassifier::MiningHardSample(const Dataset &dataset,
                                 }
                             }
                         }*/
-                        if (labels[0] != 0)
+                        if (labels[0] != 0 && probs[0] >= 0.9)
                         {
                             neg_feats->push_back(feat_row);
                             if (neg_feats->rows >= static_cast<int>(neg_num))

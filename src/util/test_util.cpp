@@ -73,6 +73,10 @@ bool ResultComp(const Result &lhs, const Result &rhs)
 float UpdateThreshold(const vector<bool> &results, const vector<float> &scores,
         const string &file_name, int pos_num, int win_num, float *th, float fppw)
 {
+    if (results.empty())
+    {
+        return 0.0f;
+    }
     vector<Result> res_vec;
     float pos = 0;
     float neg = 0;

@@ -69,7 +69,7 @@ void TestClassifier(Classifier *classifier, const string &tmp_dir)
         printf("Fail to predict.\n");
         return;
     }
-    printf("Finsih predicting.\n");
+    printf("Finish predicting.\n");
     
     float rate, fp;
     EvaluateClassify(test_labels, responses, 3, false, &rate, &fp);

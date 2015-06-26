@@ -18,8 +18,8 @@ class HogSignDetector: public SignDetector
 {
 public:
     HogSignDetector(int num_orient = 8, int cell_size = 8,
-            float c = 125, int img_size = 100):
-        classifier_(num_orient, cell_size, c, img_size),
+            float c = 125, int img_size = 100, bool use_svm = true):
+        classifier_(num_orient, cell_size, c, img_size, use_svm),
         image_size_(Size(img_size, img_size)) {}
     virtual bool Save(const string &model_name) const;
     virtual bool Load(const string &model_name);

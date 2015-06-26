@@ -7,6 +7,7 @@
 #include "common.h"
 #include "dataset.h"
 #include "test_class_util.h"
+#include "forest_classifier.h"
 #include "knn_classifier.h"
 #include "svm_classifier.h"
 #include "sign_classifier.h"
@@ -28,8 +29,9 @@ void TestDataset()
 
 void TestClassifier()
 {
-    KnnClassifier classifier(10);
+    // KnnClassifier classifier(10);
     // SvmClassifier classifier;
+    ForestClassifier classifier(10, 10);
     TestClassifier(&classifier, root_dir + model_dir);
 }
 
@@ -51,13 +53,14 @@ void FullTest(SignClassifier *classifier)
 void TrainDetector(const string &model_name)
 {
     Dataset dataset(root_dir);
-    HogSignDetector detector(4, 4, 100, 50);
-    // detector.Train(dataset);
-    // detector.Save(root_dir + model_dir + '/' + model_name);
+    HogSignDetector detector(4, 4, 100, 30, false);
+    detector.Train(dataset);
+    detector.Save(root_dir + model_dir + '/' + model_name);
     
-    detector.Load(root_dir + model_dir + '/' + model_name);
+    // detector.Load(root_dir + model_dir + '/' + model_name);
+    /*
     vector<Mat> image(1);
-    size_t idx = 10;
+    size_t idx = 100;
     vector<int> labels;
     vector<Rect> rects;
     // dataset.GetDetectImage(false, idx, &image[0]);
@@ -75,9 +78,9 @@ void TrainDetector(const string &model_name)
     cout << "Total number of windows: " << win_num << endl;
     dataset.DrawRectAndLabel(res_rects[0], res_labels[0], &image[0]);
     cv::imshow("", image[0]);
-    cv::waitKey();
+    cv::waitKey();*/
 
-    // detector.Test(dataset);
+    detector.Test(dataset);
 }
 
 int main(int argc, char **argv)
@@ -89,7 +92,7 @@ int main(int argc, char **argv)
     // TrainSignClassifier(&classifier, "hog_neg");
     // FullTest(&classifier);
 
-    TrainDetector("hog_detector_without_mining");
+    TrainDetector("hog_detector_mining_rf2");
     // TestDetectorFunc();
     return 0;
 }
