@@ -15,10 +15,12 @@ namespace ghk
 class ForestClassifier: public Classifier
 {
 public:
-    ForestClassifier(int max_depth, int min_sample_count)
+    ForestClassifier(int max_depth, int min_sample_count, int max_num)
     {
         param_.max_depth = max_depth;
         param_.min_sample_count = min_sample_count;
+        param_.term_crit = cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS,
+                max_num, 0.1);
     }
     virtual bool Save(const string &model_name) const;
     virtual bool Load(const string &model_name);

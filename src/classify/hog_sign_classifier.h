@@ -23,7 +23,7 @@ public:
     HogSignClassifier(int num_orient = 8, int cell_size = 8,
             float c = 125, int img_size = 100, bool use_svm = true):
         hog_extractor_(num_orient, cell_size),
-        svm_classifier_(c), forest_classifier_(10, 10),
+        svm_classifier_(c), forest_classifier_(13, 10, 200),
         img_size_(img_size)
     {
         use_svm_ = !use_svm;  // Force to update the pointer
