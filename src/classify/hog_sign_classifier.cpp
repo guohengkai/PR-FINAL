@@ -79,7 +79,7 @@ bool HogSignClassifier::Train(const Dataset &dataset,
     srand(time(NULL));
     vector<Mat> neg_images;
     Size img_size(img_size_, img_size_);
-    auto neg_num = static_cast<int>(images.size() / (CLASS_NUM - 1) * 5);
+    auto neg_num = static_cast<int>(images.size());//(CLASS_NUM - 1));
     printf("Randomly getting negative samples...\n");
     if (!dataset.GetRandomNegImage(neg_num, img_size, &neg_images, false))
     {

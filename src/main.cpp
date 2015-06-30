@@ -14,6 +14,7 @@
 #include "knn_sign_classifier.h"
 #include "hog_sign_classifier.h"
 #include "hog_sign_detector.h"
+#include "timer.h"
 
 using namespace ghk;
 
@@ -31,7 +32,7 @@ void TestClassifier()
 {
     // KnnClassifier classifier(10);
     // SvmClassifier classifier;
-    ForestClassifier classifier(10, 10);
+    ForestClassifier classifier(10, 10, 50);
     TestClassifier(&classifier, root_dir + model_dir);
 }
 
@@ -53,32 +54,34 @@ void FullTest(SignClassifier *classifier)
 void TrainDetector(const string &model_name)
 {
     Dataset dataset(root_dir);
-    HogSignDetector detector(4, 4, 100, 30, false);
+    HogSignDetector detector(4, 4, 100, 50, true);
     detector.Train(dataset);
     detector.Save(root_dir + model_dir + '/' + model_name);
     
-    // detector.Load(root_dir + model_dir + '/' + model_name);
-    /*
+    detector.Load(root_dir + model_dir + '/' + model_name);
+
     vector<Mat> image(1);
-    size_t idx = 100;
+    size_t idx = 250;
     vector<int> labels;
     vector<Rect> rects;
-    // dataset.GetDetectImage(false, idx, &image[0]);
-    // dataset.GetDetectRects(false, idx, &rects);
-    // dataset.GetDetectLabels(false, idx, &labels);
-    dataset.GetDetectImage(true, idx, &image[0]);
-    dataset.GetDetectRects(true, idx, &rects);
-    dataset.GetDetectLabels(true, idx, &labels);
+    dataset.GetDetectImage(false, idx, &image[0]);
+    dataset.GetDetectRects(false, idx, &rects);
+    dataset.GetDetectLabels(false, idx, &labels);
 
+    Timer timer;
+    timer.Start();
     vector<vector<Rect>> res_rects;
     vector<vector<int>> res_labels;
     vector<vector<float>> probs;
     int win_num;
     detector.Detect(image, &res_rects, &res_labels, &probs, &win_num);
     cout << "Total number of windows: " << win_num << endl;
+    float t1 = timer.Snapshot();
+    printf("Time: %0.3fs\n", t1);
+
     dataset.DrawRectAndLabel(res_rects[0], res_labels[0], &image[0]);
     cv::imshow("", image[0]);
-    cv::waitKey();*/
+    cv::waitKey();
 
     detector.Test(dataset);
 }
@@ -91,8 +94,9 @@ int main(int argc, char **argv)
     // HogSignClassifier classifier(4, 4, 100, 50);
     // TrainSignClassifier(&classifier, "hog_neg");
     // FullTest(&classifier);
-
-    TrainDetector("hog_detector_mining_rf2");
     // TestDetectorFunc();
+
+    // TrainDetector("hog_detector_without_mining_rf_deep");
+    TrainDetector("hog_detector_mining_svm");
     return 0;
 }

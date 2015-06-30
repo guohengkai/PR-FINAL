@@ -18,7 +18,8 @@ class HogSignDetector: public SignDetector
 {
 public:
     HogSignDetector(int num_orient = 8, int cell_size = 8,
-            float c = 125, int img_size = 100, bool use_svm = true):
+            float c = 125, int img_size = 100,
+            bool use_svm = true):
         classifier_(num_orient, cell_size, c, img_size, use_svm),
         image_size_(Size(img_size, img_size)) {}
     virtual bool Save(const string &model_name) const;
@@ -30,7 +31,7 @@ public:
             vector<vector<Rect>> *rects, vector<vector<int>> *labels);
     bool Detect(const vector<Mat> &images, vector<vector<Rect>> *rects,
             vector<vector<int>> *labels, vector<vector<float>> *probs,
-            int *win_num = nullptr);
+            int *win_num = nullptr, bool is_merge = true);
 
 private:
     HogSignClassifier classifier_;

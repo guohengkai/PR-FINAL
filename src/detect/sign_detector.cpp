@@ -95,7 +95,7 @@ void MergeRects(vector<Rect> &rects, vector<int> &labels,
                 }
             }
 
-            if (k <= 3)
+            if (k <= 1)
             {
                 continue;
             }

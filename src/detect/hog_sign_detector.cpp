@@ -40,24 +40,23 @@ bool HogSignDetector::Train(const Dataset &dataset)
     */
     
     // Train the classifier
+    // labels = vector<int>(labels.size(), 1);
     if (!classifier_.Train(dataset, images, labels))
     {
         return false;
     }
 
-    // Test the detector
-    th_ = 0.0f;
-    // return Test(dataset);
     return true;
 }
 
 bool HogSignDetector::Test(const Dataset &dataset)
 {
-    string suffix = "_rf_with";
+    string suffix = "_rf_without";
     vector<vector<Rect>> rects, rects_truth;
     vector<vector<int>> labels, labels_truth;
     vector<vector<float>> probs;
     size_t n = dataset.GetDetectNum(false);
+    // size_t n = dataset.GetDetectNum(true);
     int pos_num = 0;
     int win_num = 0; 
     printf("Start to detect on %zu images...\n", n);
@@ -72,20 +71,24 @@ bool HogSignDetector::Test(const Dataset &dataset)
         vector<Rect> res_rects;
         vector<int> res_labels;
         if (!dataset.GetDetectRects(false, i, &res_rects))
+        // if (!dataset.GetDetectRects(true, i, &res_rects))
         {
             return false;
         }
         if (!dataset.GetDetectLabels(false, i, &res_labels))
+        // if (!dataset.GetDetectLabels(true, i, &res_labels))
         {
             return false;
         }
         rects_truth.push_back(res_rects);
         labels_truth.push_back(res_labels);
+        // labels_truth.push_back(vector<int>(res_labels.size(), 1));
         pos_num += static_cast<int>(res_rects.size());
 
         // Get image
         Mat image;
         if (!dataset.GetDetectImage(false, i, &image))
+        // if (!dataset.GetDetectImage(true, i, &image))
         {
             return false;
         }
@@ -96,7 +99,7 @@ bool HogSignDetector::Test(const Dataset &dataset)
         vector<vector<int>> label_vec;
         vector<vector<float>> prob_vec;
         int temp_num;
-        if (!Detect(image_vec, &rect_vec, &label_vec, &prob_vec, &temp_num))
+        if (!Detect(image_vec, &rect_vec, &label_vec, &prob_vec, &temp_num, false))
         {
             return false;
         }
@@ -109,51 +112,112 @@ bool HogSignDetector::Test(const Dataset &dataset)
     printf("\nTotal detected: %zu\n", rects.size());
 
     // Evaluate the rectangles
-    vector<bool> results;
-    vector<float> scores;
-    for (size_t i = 0; i < n; ++i)
+    Mat rate;
+    bool is_set = false;
+    for (float th = 0.0f; th <= 1.0f; th += 0.02f)
     {
-        vector<bool> temp_res(labels[i].size(), false);
-        for (size_t j = 0; j < labels[i].size(); ++j)
-        {
-            scores.push_back(probs[i][j]);
-        }
+        cout << th << ", " << flush;
+        float pos = 0;
+        float neg = 0;
 
-        for (size_t k = 0; k < labels_truth[i].size(); ++k)
+        for (size_t i = 0; i < n; ++i)
         {
-            Rect rect = rects_truth[i][k];
-            size_t idx = 0;
-            float max_p = -1;
-            for (size_t j = 0; j < labels[i].size(); ++j)
+            vector<Rect> res_rects;
+            vector<int> res_labels;
+            vector<float> res_probs;
+            for (size_t j = 0; j < rects[i].size(); ++j)
             {
-                if (labels[i][j] == labels_truth[i][k] && static_cast<float>(
-                    (rect & rects[i][j]).area())
-                 / ((rect | rects[i][j]).area()) >= 0.5 &&
-                 probs[i][j] > max_p && !temp_res[j])
+                if (probs[i][j] >= th)
                 {
-                    max_p = probs[i][j];
-                    idx = j;
+                    res_rects.push_back(rects[i][j]);
+                    res_labels.push_back(labels[i][j]);
+                    res_probs.push_back(probs[i][j]);
                 }
             }
-            if (max_p >= 0)
+            // MergeRects(res_rects, res_labels, res_probs, 0.667f);
+
+            vector<bool> temp_res(res_labels.size(), false);
+            for (size_t k = 0; k < labels_truth[i].size(); ++k)
             {
-                temp_res[idx] = true;
+                Rect rect = rects_truth[i][k];
+                size_t idx = 0;
+                float max_p = -1;
+                for (size_t j = 0; j < res_labels.size(); ++j)
+                {
+                    if (res_labels[j] == labels_truth[i][k] && static_cast<float>(
+                        (rect & res_rects[j]).area())
+                     / ((rect | res_rects[j]).area()) >= 0.5 &&
+                     res_probs[j] > max_p && !temp_res[j])
+                    {
+                        max_p = res_probs[j];
+                        idx = j;
+                    }
+                }
+                if (max_p >= 0)
+                {
+                    temp_res[idx] = true;
+                }
+            }
+
+            for (size_t k = 0; k < res_labels.size(); ++k)
+            {
+                if (temp_res[k])
+                {
+                    ++pos;
+                }
+                else
+                {
+                    ++neg;
+                }
             }
         }
 
-        results.insert(results.end(), temp_res.begin(), temp_res.end());
+        Mat rate_row = Mat::zeros(1, 2, CV_32F);
+        rate_row.at<float>(0, 0) = 1 - pos / pos_num;
+        rate_row.at<float>(0, 1) = neg / win_num;
+        rate.push_back(rate_row);
+
+        if (rate_row.at<float>(0, 1) < 1e-2 && !is_set)
+        {
+            th_ = th;
+            is_set = true;
+        }
+    }
+    cout << endl;
+    SaveMat("./result/dect_curve" + suffix, rate);
+    if (!is_set)
+    {
+        th_ = 1.0f;
     }
 
+    /*
     // Find the threshold for SVM
     float rate = UpdateThreshold(results, scores,
             "./result/dect_curve" + suffix + ".txt", pos_num, win_num, &th_);
-    printf("Accuray under 10^-4 FPPW: %0.2f%%\n", rate * 100);
+    printf("Accuray under 10^-4 FPPW: %0.2f%%\n", rate * 100); 
 
     // Calculate confuse matrix
     Mat confuse_mat = Mat::zeros(CLASS_NUM, CLASS_NUM, CV_32F);
     Mat class_sum = Mat::zeros(CLASS_NUM, 1, CV_32F);
     for (size_t i = 0; i < n; ++i)
     {
+        vector<Rect> res_rects(rects[i]);
+        vector<int> res_labels(labels[i]);
+        vector<float> res_probs(probs[i]);
+        rects[i].clear();
+        labels[i].clear();
+        probs[i].clear();
+        for (size_t j = 0; j < res_rects.size(); ++j)
+        {
+            if (res_probs[j] >= th_)
+            {
+                rects[i].push_back(res_rects[j]);
+                labels[i].push_back(res_labels[j]);
+                probs[i].push_back(res_probs[j]);
+            }
+        }
+
+        MergeRects(rects[i], labels[i], probs[i], 0.667f);
         vector<bool> temp_res(labels[i].size(), false);
 
         for (size_t k = 0; k < labels_truth[i].size(); ++k)
@@ -197,7 +261,7 @@ bool HogSignDetector::Test(const Dataset &dataset)
         }
     }
     confuse_mat = confuse_mat.mul(cv::repeat(1.0f / class_sum, 1, CLASS_NUM));
-    SaveMat("./result/det_detect" + suffix, confuse_mat);
+    SaveMat("./result/det_detect" + suffix, confuse_mat);*/
     
     return true;
 }
@@ -211,13 +275,12 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
 
 bool HogSignDetector::Detect(const vector<Mat> &images,
         vector<vector<Rect>> *rects, vector<vector<int>> *labels,
-        vector<vector<float>> *probs, int *win_num)
+        vector<vector<float>> *probs, int *win_num, bool is_merge)
 {
     if (rects == nullptr || labels == nullptr)
     {
         return false;
     }
-    // th_ = 0.95;
     rects->clear();
     labels->clear();
     probs->clear();
@@ -255,7 +318,7 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
             *win_num += static_cast<int>(all_rects.size());
         }
 
-        cout << "Predicting using SVM..." << endl;
+        cout << "Predicting..." << endl;
         vector<int> label_vec;
         vector<float> prob_vec;
         if (!classifier_.Predict(image_vec, &label_vec, &prob_vec))
@@ -277,9 +340,12 @@ bool HogSignDetector::Detect(const vector<Mat> &images,
         }
         cout << "Totally " << res_rects.size() << " positions detected." << endl;
 
-        // Merge detect results
-        MergeRects(res_rects, res_labels, res_probs, 0.667f);
-        cout << "Totally " << res_rects.size() << " positions after merging." << endl;
+        if (is_merge)
+        {
+            // Merge detect results
+            MergeRects(res_rects, res_labels, res_probs, 0.667f);
+            cout << "Totally " << res_rects.size() << " positions after merging." << endl;
+        }
 
         rects->push_back(res_rects);
         labels->push_back(res_labels);

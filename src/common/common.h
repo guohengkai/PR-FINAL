@@ -35,5 +35,6 @@ using std::stringstream;
 using std::vector;
 using std::cout;
 using std::endl;
+using std::flush;
 }  // namespace ghk
 #endif  // FINAL_COMMON_H_
